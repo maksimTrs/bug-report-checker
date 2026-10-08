@@ -9,6 +9,7 @@ from bug_report_checker.preprocess import (
     strip_strikethrough,
     strip_summary_tags,
     truncate_code,
+    unescape_entities,
 )
 
 LINES = "\n".join(f"line {i}" for i in range(1, 9))
@@ -167,6 +168,19 @@ def test_truncate_code_leaves_short_or_plain_text(text):
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
+        ("doesn&#x27;t work", "doesn't work"),
+        ("&lt;div&gt; &amp; &quot;x&quot; &#39;y&#39;", "<div> & \"x\" 'y'"),
+        ("?a=1&copy=2&lt", "?a=1&copy=2&lt"),
+        ("AT&T and R&D", "AT&T and R&D"),
+    ],
+)
+def test_unescape_entities_only_with_semicolon(text, expected):
+    assert unescape_entities(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
         ("h3. Steps to reproduce", "### Steps to reproduce"),
         ("h1. Title\nh6. Note", "# Title\n###### Note"),
         ("Click *Save* and *OK*", "Click **Save** and **OK**"),
@@ -188,6 +202,8 @@ def test_truncate_code_leaves_short_or_plain_text(text):
         ("{color:red}Error{color} {quote}cited{quote}", "Error cited"),
         ("{panel:title=Note}\ntext\n{panel}", "\ntext\n"),
         ("above\n----\nbelow", "above\n---\nbelow"),
+        ("Hi\\\\\nthere\\\\", "Hi\nthere"),
+        (r"open \\server\share now", r"open \\server\share now"),
     ],
 )
 def test_jira_to_markdown(text, expected):

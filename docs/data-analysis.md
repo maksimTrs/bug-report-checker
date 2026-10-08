@@ -112,4 +112,8 @@ The state gets `max_len - question head - 1` tokens. For `laya-typed-decisions` 
 
 Rare parts to top up in sampling (T1.11) and synthetic data (T1.12): explicit steps, explicit expected result, version or build number in the text, headed templates (filled, partially filled, empty), screenshot-only results.
 
-Preprocessing gaps found on the way (1% sample, share of descriptions): HTML entities such as `&#x27;` — 1.2% (Apache, Jira Cloud); Jira forced line break `\` — 0.5%; unified diffs (`@@ -1,7 +1,7 @@`) are not shortened like code blocks — 0.2%.
+Preprocessing gaps found on the way (1% sample, share of descriptions, before → after the fix):
+
+- HTML entities such as `&#x27;` (Apache, Jira Cloud exports): 1.2% → 0.02%. Only entities ending in `;` are decoded, so `?a=1&copy=2` in a URL stays as is.
+- Jira forced line break `\\` at a line end: 0.34% → 0.01%. Mid-line `\\server\share` is left alone.
+- Unified diffs (`@@ -1,7 +1,7 @@`) are not shortened like code blocks: 0.2%, left as is.

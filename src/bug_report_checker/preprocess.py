@@ -3,8 +3,11 @@
 The model must see the same text in all three places, so every rule lives here once.
 """
 
+import html
 import re
 
+# With `;` only: html.unescape alone also decodes `&copy` in `?a=1&copy=2`.
+_ENTITY = re.compile(r"&(?:#\d+|#x[0-9a-f]+|[a-z]+\d*);", re.IGNORECASE)
 _HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 # GFM strikethrough: may wrap lines inside a paragraph, never crosses a blank line.
 _STRIKETHROUGH = re.compile(r"~~(?:(?!\n[ \t]*\n).)+?~~", re.DOTALL)
@@ -59,7 +62,14 @@ _JIRA_LINK = re.compile(
 _JIRA_BARE_LINK = re.compile(r"\[((?:https?|mailto):[^\]|\s]+)\]")
 _JIRA_WRAPPER = re.compile(r"\{(?:color|panel|quote)(?::[^}\n]*)?\}")
 _JIRA_RULE = re.compile(r"^-{4,}[ \t]*$", re.M)
+# Forced line break at a line end only: `\\server\share` mid-line is a UNC path.
+_JIRA_BREAK = re.compile(r"\\\\[ \t]*$", re.M)
 _BLANK_LINES = re.compile(r"\n{3,}")
+
+
+def unescape_entities(text: str) -> str:
+    """`&#x27;` -> `'`: some trackers export descriptions HTML-escaped."""
+    return _ENTITY.sub(lambda m: html.unescape(m.group(0)), text)
 
 
 def strip_html_comments(text: str) -> str:
@@ -133,6 +143,7 @@ def _list_item(m: re.Match) -> str:
 
 def _jira_prose(text: str) -> str:
     text = _JIRA_RULE.sub("---", text)
+    text = _JIRA_BREAK.sub("", text)
     text = _JIRA_LIST.sub(_list_item, text)  # before headings: they start with `#`
     text = _JIRA_HEADING.sub(lambda m: "#" * int(m.group(1)) + " ", text)
     text = _JIRA_BOLD.sub(r"**\1**", text)
@@ -163,6 +174,7 @@ def preprocess(
     becomes markdown before links are replaced (`[text|url]`), media before links.
     """
     text = (description or "").replace("\r\n", "\n").replace("\r", "\n")
+    text = unescape_entities(text)
     text = strip_html_comments(text)
     text = truncate_code(text)
     if jira:
