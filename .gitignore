@@ -3,6 +3,8 @@ plan-bug-report-checker.md
 TASKS.md
 docs/decisions.md
 CLAUDE.md
+# Synthetic-data prompt embeds the team's bug template
+labeling/synthetic_prompt.md
 
 # IDE
 .idea/
