@@ -6,7 +6,8 @@ result only as a screenshot, ...). Train specs cover every variation at least
 
 Usage:
     python -m bug_report_checker.dataset.synthetic_plan specs <specs.json>
-    python -m bug_report_checker.dataset.synthetic_plan check <specs.json> <out.jsonl>
+    python -m bug_report_checker.dataset.synthetic_plan build \
+        <specs.json> <out.jsonl> <batch.md>...
 """
 
 import json
@@ -41,6 +42,10 @@ INCOMPATIBLE = [
 _URL_HOST = re.compile(r"https?://([^/\s)\]>\"'`]+)")
 _CODES = "|".join(c for c in (*BODY, *SUMMARY) if "_" in c)  # `full` is a plain word
 _CODE_IN_TEXT = re.compile(rf"\b(?:{_CODES})\b|synthetic", re.IGNORECASE)
+# Generator output: `@@@ <id>`, summary line, `@@@`, raw markdown description.
+_BLOCK = re.compile(
+    r"^@@@ (\S+)[ \t]*\n([^\n]*)\n@@@[ \t]*\n(.*?)(?=^@@@ \S|\Z)", re.M | re.DOTALL
+)
 
 
 def _bodies(rng, *, full, free, field, build, both, long_):
@@ -115,6 +120,14 @@ def coverage(specs: list[dict]) -> Counter:
     return Counter(code for spec in specs for code in spec["variations"])
 
 
+def parse_batch(text: str) -> list[dict]:
+    """Generator output -> records; plain text avoids escaping quotes in JSON."""
+    return [
+        {"id": m[1], "summary": m[2].strip(), "description": m[3].strip()}
+        for m in _BLOCK.finditer(text.replace("\r\n", "\n"))
+    ]
+
+
 def validate_records(specs: list[dict], records: list[dict]) -> None:
     """Raise if ids do not match the specs, a field is empty, or the text leaks."""
     expected = {s["id"] for s in specs}
@@ -149,11 +162,19 @@ def main(argv: list[str]) -> None:
         )
         for name, specs in (("train", train), ("style", style)):
             print(name, len(specs), dict(sorted(coverage(specs).items())))
-    elif command == "check":
+    elif command == "build":
         plan = json.loads(Path(paths[0]).read_text(encoding="utf-8"))
-        lines = Path(paths[1]).read_text(encoding="utf-8").splitlines()
-        validate_records(plan["train"] + plan["style"], [json.loads(x) for x in lines])
-        print("ok:", len(lines), "records")
+        specs = {s["id"]: s for s in plan["train"] + plan["style"]}
+        records = [
+            r for p in paths[2:] for r in parse_batch(Path(p).read_text("utf-8"))
+        ]
+        validate_records(list(specs.values()), records)
+        records.sort(key=lambda r: r["id"])
+        with open(paths[1], "w", encoding="utf-8") as out:
+            for r in records:
+                r["variations"] = specs[r["id"]]["variations"]
+                out.write(json.dumps(r, ensure_ascii=False) + "\n")
+        print("ok:", len(records), "records")
     else:
         raise SystemExit(f"unknown command {command!r}")
 

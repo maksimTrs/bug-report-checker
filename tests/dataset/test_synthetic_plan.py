@@ -5,6 +5,7 @@ from bug_report_checker.dataset.synthetic_plan import (
     TRAIN_MIN,
     build_specs,
     coverage,
+    parse_batch,
     validate_records,
 )
 
@@ -74,3 +75,31 @@ def test_validate_records_accepts_matching_ids():
 def test_validate_records_rejects_bad_batches(records, message):
     with pytest.raises(ValueError, match=message):
         validate_records([{"id": "syn-001"}, {"id": "syn-002"}], records)
+
+
+def test_parse_batch_splits_blocks_and_keeps_markdown():
+    text = (
+        "@@@ syn-train-001\n"
+        "Fix webhook retries\n"
+        "@@@\n"
+        "**Build version:** current prod\n"
+        "\n"
+        "Logs @@@ inline stay\n"
+        "\n"
+        "@@@ syn-train-002\n"
+        "Export has no header\n"
+        "@@@\n"
+        "One line.\n"
+    )
+    assert parse_batch(text) == [
+        {
+            "id": "syn-train-001",
+            "summary": "Fix webhook retries",
+            "description": "**Build version:** current prod\n\nLogs @@@ inline stay",
+        },
+        {
+            "id": "syn-train-002",
+            "summary": "Export has no header",
+            "description": "One line.",
+        },
+    ]
