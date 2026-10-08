@@ -1,12 +1,7 @@
 import gzip
 import json
-import zipfile
 
-from bug_report_checker.dataset.select_bugs import (
-    MAPPING_PATH,
-    load_bug_types,
-    select_bugs,
-)
+from bug_report_checker.dataset.select_bugs import load_bug_types, select_bugs
 
 MAPPING = {
     "Apache": {
@@ -18,10 +13,9 @@ MAPPING = {
 }
 
 
-def _dataset_zip(tmp_path):
-    path = tmp_path / "dataset.zip"
-    with zipfile.ZipFile(path, "w") as zf:
-        zf.writestr(MAPPING_PATH, json.dumps(MAPPING))
+def _mapping(tmp_path):
+    path = tmp_path / "mapping.json"
+    path.write_text(json.dumps(MAPPING), encoding="utf-8")
     return path
 
 
@@ -33,7 +27,7 @@ def _issues(tmp_path, records):
 
 
 def test_load_bug_types_keeps_only_bug_report_code(tmp_path):
-    assert load_bug_types(_dataset_zip(tmp_path)) == {
+    assert load_bug_types(_mapping(tmp_path)) == {
         "Apache": {"Bug"},
         "RedHat": {"Defect"},
     }
@@ -51,7 +45,7 @@ def test_select_bugs_filters_by_tracker_specific_type_and_counts(tmp_path):
     out = tmp_path / "bugs.jsonl.gz"
 
     bugs, with_description = select_bugs(
-        _issues(tmp_path, records), _dataset_zip(tmp_path), out
+        _issues(tmp_path, records), _mapping(tmp_path), out
     )
 
     assert bugs == {"Apache": 2, "RedHat": 1}

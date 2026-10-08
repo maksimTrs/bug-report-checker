@@ -34,7 +34,7 @@ Issues per repository match Table 1 of Montgomery et al., MSR 2022, exactly:
 
 ## Bug selection
 
-A bug is an issue whose type the dataset authors coded as **Bug Report** in `jira_issuetype_thematic_analysis.json` (theme Maintenance), matched per tracker by type name: `python -m bug_report_checker.dataset.select_bugs`. Output: `data/raw/bugs.jsonl.gz` (507 MB).
+A bug is an issue whose type the dataset authors coded as **Bug Report** in `jira_issuetype_thematic_analysis.json` (theme Maintenance), matched per tracker by type name: `python -m bug_report_checker.dataset.select_bugs` (the mapping file is copied from `0. DataDefinition/` of the archive to `data/raw/`). Output: `data/raw/bugs.jsonl.gz` (507 MB).
 
 Types coded Bug Report, issues across all trackers: Bug 1,521,015 · Defect 1,280 · Public Security Vulnerability 98 · Story Defect 61 · Outage 43 · Incident 33 · Issue 4 · Atlassian Incident 4. The non-Bug/Defect types are under 0.02% and kept as the authors coded them.
 

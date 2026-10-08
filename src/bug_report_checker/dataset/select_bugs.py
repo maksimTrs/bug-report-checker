@@ -1,30 +1,26 @@
 """Select bug reports using the dataset authors' issue-type mapping.
 
 The authors mapped every issue type of every tracker to a theme and a code
-(`jira_issuetype_thematic_analysis.json`). Bugs are the types coded "Bug Report":
+(`jira_issuetype_thematic_analysis.json`, taken from `0. DataDefinition/` of the
+Zenodo archive). Bugs are the types coded "Bug Report":
 Bug, Defect and their per-tracker analogues. Types missing from the mapping are skipped.
 
 Usage: python -m bug_report_checker.dataset.select_bugs \
-    <issues.jsonl.gz> <dataset.zip> <bugs.jsonl.gz>
+    <issues.jsonl.gz> <mapping.json> <bugs.jsonl.gz>
 """
 
 import gzip
 import json
 import sys
-import zipfile
 from collections import Counter
 from pathlib import Path
 
-MAPPING_PATH = (
-    "ThePublicJiraDataset/0. DataDefinition/jira_issuetype_thematic_analysis.json"
-)
 BUG_CODE = "Bug Report"
 
 
-def load_bug_types(zip_path: Path) -> dict[str, set[str]]:
+def load_bug_types(mapping_path: Path) -> dict[str, set[str]]:
     """Issue type names coded as bug reports, per tracker."""
-    with zipfile.ZipFile(zip_path) as zf:
-        mapping = json.loads(zf.read(MAPPING_PATH))
+    mapping = json.loads(mapping_path.read_text(encoding="utf-8"))
     bug_types = {
         tracker: {name for name, m in types.items() if m["code"] == BUG_CODE}
         for tracker, types in mapping.items()
@@ -33,10 +29,10 @@ def load_bug_types(zip_path: Path) -> dict[str, set[str]]:
 
 
 def select_bugs(
-    issues_path: Path, zip_path: Path, out_path: Path
+    issues_path: Path, mapping_path: Path, out_path: Path
 ) -> tuple[Counter, Counter]:
     """Copy bugs to `out_path`; return per-tracker counts: bugs, with description."""
-    bug_types = load_bug_types(zip_path)
+    bug_types = load_bug_types(mapping_path)
     bugs: Counter = Counter()
     with_description: Counter = Counter()
     with (
