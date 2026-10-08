@@ -1,0 +1,17 @@
+# Local-only planning notes
+plan-bug-report-checker.md
+TASKS.md
+docs/decisions.md
+
+# IDE
+.idea/
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+
+# Raw dataset dump and model checkpoints (large, downloaded on demand)
+data/raw/
+checkpoints/
