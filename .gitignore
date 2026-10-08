@@ -21,6 +21,7 @@ data/raw/
 data/interim/
 # Labeling sets: synthetic reports embed the team's bug template
 data/*.jsonl
+data/laya/
 checkpoints/
 .hf-cache/
 .torch-cache/
