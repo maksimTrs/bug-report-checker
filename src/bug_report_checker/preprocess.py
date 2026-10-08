@@ -59,6 +59,7 @@ _JIRA_LINK = re.compile(
 _JIRA_BARE_LINK = re.compile(r"\[((?:https?|mailto):[^\]|\s]+)\]")
 _JIRA_WRAPPER = re.compile(r"\{(?:color|panel|quote)(?::[^}\n]*)?\}")
 _JIRA_RULE = re.compile(r"^-{4,}[ \t]*$", re.M)
+_BLANK_LINES = re.compile(r"\n{3,}")
 
 
 def strip_html_comments(text: str) -> str:
@@ -145,3 +146,23 @@ def jira_to_markdown(text: str) -> str:
     parts = _CODE_SPAN.split(text)
     parts[::2] = map(_jira_prose, parts[::2])
     return "".join(parts)
+
+
+def preprocess(
+    summary: str, description: str | None, *, jira: bool = False
+) -> dict[str, str]:
+    """Model state for one bug report; `jira=True` only for Jira wiki text.
+
+    Order matters: code is cut first so later rules do not parse it, Jira markup
+    becomes markdown before links are replaced (`[text|url]`), media before links.
+    """
+    text = (description or "").replace("\r\n", "\n").replace("\r", "\n")
+    text = strip_html_comments(text)
+    text = truncate_code(text)
+    if jira:
+        text = jira_to_markdown(text)
+    text = strip_strikethrough(text)
+    text = replace_media(text)
+    text = replace_links(text)
+    text = _BLANK_LINES.sub("\n\n", text)
+    return {"summary": strip_summary_tags(summary), "description": text.strip()}

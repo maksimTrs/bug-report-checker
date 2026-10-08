@@ -2,6 +2,7 @@ import pytest
 
 from bug_report_checker.preprocess import (
     jira_to_markdown,
+    preprocess,
     replace_links,
     replace_media,
     strip_html_comments,
@@ -213,3 +214,52 @@ def test_jira_template_matches_markdown_template():
         "### Actual result\nError, see [log](https://ci.example.com/1)"
     )
     assert jira_to_markdown(jira) == markdown
+
+
+def test_preprocess_jira_bug_applies_all_rules():
+    description = (
+        "h3. Steps to reproduce\r\n"
+        "# Open {{Settings}} on [stand|https://dev1.example.com/app?x=1]\r\n"
+        "# Click *Save*\r\n"
+        "\r\n\r\n\r\n"
+        "h3. Expected result\r\n"
+        "Saved. -Was: dialog closes-\r\n"
+        "h3. Actual result\r\n"
+        "!error.png|thumbnail!\r\n"
+        "{code:java}\r\n"
+        + "\r\n".join(f"\tat a.B.m{i}(B.java:{i})" for i in range(8))
+        + "\r\n{code}\r\n"
+        "Logs: https://ci.example.com/job/7 <!-- attach logs -->"
+    )
+    state = preprocess("[Billing][API] Export fails", description, jira=True)
+    frames = "\n".join(f"\tat a.B.m{i}(B.java:{i})" for i in range(5))
+    assert state == {
+        "summary": "Export fails",
+        "description": (
+            "### Steps to reproduce\n"
+            "1. Open `Settings` on stand\n"
+            "1. Click **Save**\n"
+            "\n"
+            "### Expected result\n"
+            "Saved. \n"
+            "### Actual result\n"
+            "[image]\n"
+            f"```\n{frames}\n[… truncated]\n```\n"
+            "Logs: [link: ci.example.com]"
+        ),
+    }
+
+
+def test_preprocess_markdown_bug_keeps_markdown_syntax():
+    description = "# Steps\n1. Open *Settings*\n\n![](shot.png)"
+    assert preprocess("Export fails", description) == {
+        "summary": "Export fails",
+        "description": "# Steps\n1. Open *Settings*\n\n[image]",
+    }
+
+
+def test_preprocess_empty_description():
+    assert preprocess(" Export fails ", None) == {
+        "summary": "Export fails",
+        "description": "",
+    }
