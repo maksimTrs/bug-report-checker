@@ -39,7 +39,7 @@ Not labelled here, decided by code: the test environment (stand / production) an
 
 **Yes:** the summary names the faulty behaviour — a crash, an error, a wrong or missing value, a hang, a slowdown, an element that does not appear. An exception name counts. The grammatical form does not matter: "Fix crash when …" still names the defect.
 
-**No:** a bare noun or area ("Tracking page"), a task with no symptom ("Increase pickup slot timeout", "Add retry to label printing"), a plea or a question ("Help!!!", "Is this expected?").
+**No:** a bare noun or area ("Tracking page"), a task with no symptom ("Increase pickup slot timeout", "Add retry to label printing"), a plea or a question ("Help!!!", "Is this expected?"), a failure too vague to act on ("does not work", "is broken", "issue with …").
 
 | Summary | Label | Why |
 |---|---|---|
@@ -63,7 +63,7 @@ Not labelled here, decided by code: the test environment (stand / production) an
 
 **Yes:** the summary names what triggers the problem — an action ("after changing the address", "on save"), a moment ("on startup", "after upgrade"), or a condition ("for parcels over 30 kg", "with an empty cart", "on Android").
 
-**No:** the symptom alone, or a frequency that is not a condition ("sometimes", "intermittently", "randomly").
+**No:** the symptom alone, a frequency that is not a condition ("sometimes", "intermittently", "randomly"), or a clause that qualifies a requested task rather than triggering the problem ("Archive finished routes when the shift is over").
 
 | Summary | Label | Why |
 |---|---|---|
