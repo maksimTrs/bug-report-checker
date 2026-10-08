@@ -1,6 +1,7 @@
 import pytest
 
 from bug_report_checker.preprocess import (
+    jira_to_markdown,
     replace_links,
     replace_media,
     strip_html_comments,
@@ -153,3 +154,62 @@ def test_truncate_code_bare_python_traceback_keeps_error_line():
 )
 def test_truncate_code_leaves_short_or_plain_text(text):
     assert truncate_code(text) == text
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("h3. Steps to reproduce", "### Steps to reproduce"),
+        ("h1. Title\nh6. Note", "# Title\n###### Note"),
+        ("Click *Save* and *OK*", "Click **Save** and **OK**"),
+        ("2 * 3 * 4", "2 * 3 * 4"),
+        ("* a\n** b\n# c\n## d\n#* e\n- f", "* a\n  * b\n1. c\n  1. d\n  * e\n* f"),
+        ("-old value- new value", "~~old value~~ new value"),
+        ("-Xmx512m -Xms256m on 2026-01-02", "-Xmx512m -Xms256m on 2026-01-02"),
+        ("a - b - c, well-known", "a - b - c, well-known"),
+        ("fill=-,flush=-,to=1", "fill=-,flush=-,to=1"),
+        ("(a)->field)->type", "(a)->field)->type"),
+        (r"start \-\-log=1 \-\-size=2", r"start \-\-log=1 \-\-size=2"),
+        (
+            "[build log|https://ci.example.com/1]",
+            "[build log](https://ci.example.com/1)",
+        ),
+        ("[https://example.com/x]", "https://example.com/x"),
+        ("[Docs|#anchor] and [~a1b2c3]", "[Docs|#anchor] and [~a1b2c3]"),
+        ("Edit {{config.yml}}", "Edit `config.yml`"),
+        ("{color:red}Error{color} {quote}cited{quote}", "Error cited"),
+        ("{panel:title=Note}\ntext\n{panel}", "\ntext\n"),
+        ("above\n----\nbelow", "above\n---\nbelow"),
+    ],
+)
+def test_jira_to_markdown(text, expected):
+    assert jira_to_markdown(text) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "```\nint *ptr* = -1-;\n# not a list\n```",
+        "Set `*ptr*` and `-x-`",
+    ],
+)
+def test_jira_to_markdown_leaves_code_alone(text):
+    assert jira_to_markdown(text) == text
+
+
+def test_jira_to_markdown_keeps_monospace_content_literal():
+    assert jira_to_markdown("Run {{-Dfoo=*bar*}}") == "Run `-Dfoo=*bar*`"
+
+
+def test_jira_template_matches_markdown_template():
+    jira = (
+        "h3. Steps to reproduce\n# Open *Settings*\n# Click {{Save}}\n"
+        "h3. Expected result\nSaved. -Was: closed-\n"
+        "h3. Actual result\nError, see [log|https://ci.example.com/1]"
+    )
+    markdown = (
+        "### Steps to reproduce\n1. Open **Settings**\n1. Click `Save`\n"
+        "### Expected result\nSaved. ~~Was: closed~~\n"
+        "### Actual result\nError, see [log](https://ci.example.com/1)"
+    )
+    assert jira_to_markdown(jira) == markdown

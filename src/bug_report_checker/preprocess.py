@@ -44,6 +44,21 @@ _STACKTRACE = re.compile(
     r"|^Traceback \(most recent call last\):[ \t]*\n(?:[ \t]+.*(?:\n|\Z))+",
     re.MULTILINE,
 )
+_CODE_SPAN = re.compile(
+    r"(^[ \t]*```[^\n]*\n.*?\n[ \t]*```[ \t]*$|`[^`\n]+`)", re.DOTALL | re.M
+)
+_JIRA_MONO = re.compile(r"\{\{(.+?)\}\}")
+_JIRA_HEADING = re.compile(r"^h([1-6])\.[ \t]+", re.M)
+_JIRA_LIST = re.compile(r"^[ \t]*([*#]+|-)[ \t]+(?=\S)", re.M)
+_JIRA_BOLD = re.compile(r"(?<![\w*])\*(?=[^\s*])([^*\n]*?[^\s*])\*(?![\w*])")
+# Opens only after a space or an opening bracket/quote: logs are full of `=-`, `->`.
+_JIRA_STRIKE = re.compile(r"(?<![^\s(\[\"'*])-(?=[^\s>-])([^-\n]*?[^\s-])-(?![\w>-])")
+_JIRA_LINK = re.compile(
+    r"\[([^\]|\n]+)\|((?:https?|mailto):[^\]|\s]+)(?:\|[^\]\n]*)?\]"
+)
+_JIRA_BARE_LINK = re.compile(r"\[((?:https?|mailto):[^\]|\s]+)\]")
+_JIRA_WRAPPER = re.compile(r"\{(?:color|panel|quote)(?::[^}\n]*)?\}")
+_JIRA_RULE = re.compile(r"^-{4,}[ \t]*$", re.M)
 
 
 def strip_html_comments(text: str) -> str:
@@ -101,3 +116,32 @@ def truncate_code(text: str) -> str:
     text = _FENCE.sub(lambda m: m.group(1) + _head(m.group(2)) + m.group(3), text)
     text = _JIRA_CODE.sub(_jira_block, text)
     return _STACKTRACE.sub(_trace, text)
+
+
+def _list_item(m: re.Match) -> str:
+    markers = m.group(1)
+    bullet = "1." if markers[-1] == "#" else "*"
+    return "  " * (len(markers) - 1) + bullet + " "
+
+
+def _jira_prose(text: str) -> str:
+    text = _JIRA_RULE.sub("---", text)
+    text = _JIRA_LIST.sub(_list_item, text)  # before headings: they start with `#`
+    text = _JIRA_HEADING.sub(lambda m: "#" * int(m.group(1)) + " ", text)
+    text = _JIRA_BOLD.sub(r"**\1**", text)
+    text = _JIRA_STRIKE.sub(r"~~\1~~", text)
+    text = _JIRA_LINK.sub(r"[\1](\2)", text)
+    text = _JIRA_BARE_LINK.sub(r"\1", text)
+    return _JIRA_WRAPPER.sub("", text)
+
+
+def jira_to_markdown(text: str) -> str:
+    """Jira wiki -> markdown, so the model does not learn the format difference.
+
+    Only for Jira text: `# x` is a list in Jira but a heading in markdown. Expects
+    `truncate_code` to have run, so code is already in fences; code is left as is.
+    """
+    text = _JIRA_MONO.sub(r"`\1`", text)
+    parts = _CODE_SPAN.split(text)
+    parts[::2] = map(_jira_prose, parts[::2])
+    return "".join(parts)
