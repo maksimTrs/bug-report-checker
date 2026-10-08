@@ -61,3 +61,11 @@ def test_labels_are_matched_by_id():
 def test_report_without_labels_fails():
     with pytest.raises(ValueError, match="no labels for \\['b'\\]"):
         to_laya_rows([_report("a"), _report("b")], [_labels("a")])
+
+
+def test_smoothing_softens_targets_and_keeps_the_label():
+    [row] = to_laya_rows([_report()], [_labels(steps=False)], smoothing=0.1)
+
+    assert row["gold"]["steps"]["probabilities"] == {"false": 0.95, "true": 0.05}
+    assert row["gold"]["steps"]["label"] is False
+    assert row["gold"]["actual"]["probabilities"] == {"false": 0.05, "true": 0.95}
