@@ -19,6 +19,8 @@ build-backend = "uv_build"
 # Keep everything inside the project: no shared cache, no Python downloads into the user profile.
 cache-dir = ".uv-cache"
 python-preference = "only-system"
+# `data` holds dataset tooling (pymongo's bson); the Action runtime installs without it.
+default-groups = ["dev", "data"]
 
 # CPU-only torch everywhere: PyPI ships CUDA builds on Linux (GitHub runners), several GB we never use.
 [tool.uv.sources]
@@ -36,6 +38,9 @@ testpaths = ["tests"]
 select = ["E", "F", "I", "B", "UP"]
 
 [dependency-groups]
+data = [
+    "pymongo>=4.18.2",
+]
 dev = [
     "pytest>=9.1.1",
     "ruff>=0.16.10",
