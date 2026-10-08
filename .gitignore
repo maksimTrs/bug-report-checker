@@ -16,3 +16,5 @@ __pycache__/
 # Raw dataset dump and model checkpoints (large, downloaded on demand)
 data/raw/
 checkpoints/
+.hf-cache/
+.torch-cache/
