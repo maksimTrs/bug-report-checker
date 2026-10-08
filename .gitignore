@@ -19,6 +19,8 @@ __pycache__/
 # Raw dataset dump and model checkpoints (large, downloaded on demand)
 data/raw/
 data/interim/
+# Labeling sets: synthetic reports embed the team's bug template
+data/*.jsonl
 checkpoints/
 .hf-cache/
 .torch-cache/
