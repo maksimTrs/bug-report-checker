@@ -93,7 +93,14 @@ def test_replace_media(text, expected):
         ("Open https://example.com/a/b.", "Open [link: example.com]."),
         ("(see http://localhost:8080/admin)", "(see [link: localhost:8080])"),
         ("<https://dev1.example.com/app>", "[link: dev1.example.com]"),
-        ("[build log](https://ci.example.com/job/1)", "build log"),
+        (
+            "[build log](https://ci.example.com/job/1)",
+            "build log [link: ci.example.com]",
+        ),
+        (
+            "[https://ci.example.com/1](https://ci.example.com/1)",
+            "[link: ci.example.com]",
+        ),
         ("Build version: 2026.09-dev-118", "Build version: 2026.09-dev-118"),
     ],
 )
@@ -237,7 +244,7 @@ def test_preprocess_jira_bug_applies_all_rules():
         "summary": "Export fails",
         "description": (
             "### Steps to reproduce\n"
-            "1. Open `Settings` on stand\n"
+            "1. Open `Settings` on stand [link: dev1.example.com]\n"
             "1. Click **Save**\n"
             "\n"
             "### Expected result\n"

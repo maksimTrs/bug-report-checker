@@ -26,7 +26,7 @@ _MEDIA = re.compile(
     ),
     re.IGNORECASE,
 )
-_MD_LINK = re.compile(r"\[([^\]\n]+)\]\(https?://[^)\s]+\)")
+_MD_LINK = re.compile(r"\[([^\]\n]+)\]\((https?://[^)\s]+)\)")
 _URL = re.compile(r"<?https?://([^/\s<>\"'()]+)(?:[^\s<>\"']*[^\s<>\"'.,;:!?)\]])?>?")
 CODE_LINES = 5
 TRUNCATED = "[… truncated]"
@@ -84,8 +84,14 @@ def replace_media(text: str) -> str:
 
 def replace_links(text: str) -> str:
     """Links -> `[link: host]`; the host keeps the environment signal (stand, prod)."""
-    text = _MD_LINK.sub(r"\1", text)
+    text = _MD_LINK.sub(_md_link, text)
     return _URL.sub(r"[link: \1]", text)
+
+
+def _md_link(m: re.Match) -> str:
+    """`[text](url)` -> `text url`: keep the label and the host; a URL label once."""
+    label, url = m.groups()
+    return url if label.startswith(("http://", "https://")) else f"{label} {url}"
 
 
 def _head(code: str) -> str:
