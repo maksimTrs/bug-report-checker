@@ -117,3 +117,21 @@ Preprocessing gaps found on the way (1% sample, share of descriptions, before �
 - HTML entities such as `&#x27;` (Apache, Jira Cloud exports): 1.2% → 0.02%. Only entities ending in `;` are decoded, so `?a=1&copy=2` in a URL stays as is.
 - Jira forced line break `\\` at a line end: 0.34% → 0.01%. Mid-line `\\server\share` is left alone.
 - Unified diffs (`@@ -1,7 +1,7 @@`) are not shortened like code blocks: 0.2%, left as is.
+
+## Sample for labeling
+
+`python -m bug_report_checker.dataset.sample_public data/raw/bugs.jsonl.gz <checkpoint>/tokenizer/tokenizer.json data/interim` (seed 20261008, pool: random 5% of bugs with a description, 74k). Output: `public_train.jsonl` (220) and `public_eval.jsonl` (100), kept out of git.
+
+- **Split by project first.** Per tracker, random projects go to eval until they hold ~30% of the tracker's bugs; the script fails if a project ends up on both sides. Result: 106 train projects, 45 eval projects, none shared.
+- **Tracker seats ∝ √size** (min 2): Apache 42 + 22, Mojang 40 + 16, RedHat 23 + 10, Jira 22 + 10, Qt 20 + 8, … — every tracker is represented, Apache and Mojang take 37% instead of 62%.
+- **Length buckets** of the preprocessed state, 30 / 40 / 30%: ≤ 60, 61–250, 251–767 tokens. Train holds only states that fit 767 tokens; eval adds 10 longer ones for `predict_long`.
+- **Rare parts weighted ×3** (keyword heuristic, not a label):
+
+| Part | Pool | Train |
+|---|---:|---:|
+| Steps (header or numbered list) | 12.8% | 20.5% |
+| "Expected" | 9.7% | 16.4% |
+| Version or build number | 14.1% | 26.4% |
+| Headed template (≥ 2 of steps / expected / actual) | 2.8% | 6.4% |
+
+The rest of the balance comes from synthetic reports (T1.12–T1.13).
