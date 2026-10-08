@@ -48,3 +48,16 @@ Both teachers labelled `data/eval.jsonl` with the same prompt and rubric, indepe
 | expected | 82% | 80% | 90% |
 | actual | 93% | 90% | 100% |
 | build_version | 26% | 24% | 50% |
+
+## Frozen eval set
+
+`eval/eval.jsonl` — the 100 eval reports with final labels, not to be changed. Labels: Opus, except the 25 blocker labels (21 reports) where Sonnet and Opus disagreed — each was decided against the rubric; 19 kept Opus, 6 took Sonnet. Hint disagreements (summary checks) keep Opus without review.
+
+Agreement of each teacher with the final labels:
+
+| Check | Opus | Sonnet |
+|---|---:|---:|
+| steps | 99/100 | 95/100 |
+| expected | 97/100 | 93/100 |
+| actual | 98/100 | 97/100 |
+| build_version | 100/100 | 96/100 |
