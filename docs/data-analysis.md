@@ -89,3 +89,27 @@ The state gets `max_len - question head - 1` tokens. For `laya-typed-decisions` 
 | **Total** | **73,967** | **123** | **424** | **1,810** | **3.7%** | **2.9%** |
 
 96% of bugs fit one 1024-token sequence even with the largest question head; the 3–4% tail goes through `predict_long` (sliding windows). Mojang reports are the shortest (median 79), MariaDB and IntelDAOS the longest — sampling (T1.11) should keep length buckets, not only trackers.
+
+## Manual review of 50 bugs
+
+50 bugs with a description, reservoir-sampled over the whole file (`random.Random(10)`), read after preprocessing. Trackers: Mojang 16, Apache 11, Qt 7, RedHat 6, Jira 6, Spring 2, IntelDAOS 1, Sakai 1 (Jira counts BCLOUD/JRACLOUD/CONFSERVER/SRCTREEWIN).
+
+"Explicit" means a section or a list; "in prose" means the content is there but has to be inferred from free text.
+
+| Part of the report | Explicit | In prose only | Missing |
+|---|---:|---:|---:|
+| Steps to reproduce | 9 (18%) | 27 (54%) | 14 (28%) |
+| Expected result | 10 (20%) | 16 (32%) — only as a negation, "X does not work" | 24 (48%) |
+| Actual result | 46 (92%) | — | 4 (8%) |
+| Version in summary or description | 9 (18%) | — | 41 (82%) |
+
+- **Free form dominates.** Only 4 of 50 (8%) use headed sections (Steps / Expected / Actual); one of them is the Mojang template left unfilled, placeholders only — a clean "missing everything" case.
+- **Version lives in the Jira field, not the text.** `versions` (Affects Version) is set for 39 of 50, but the text names a version in 9. The model sees only summary and description, so public bugs give few positive version examples.
+- **Actual is almost always there** (92%): a bug report is, first of all, a description of what went wrong. Most reports with no explicit steps still describe the scenario in prose.
+- **Summary.** Most name the defect and the place. Weak ones: a bare noun ("Oven", "Flash, PDF and plugins"), a plea ("help!!!!"), a question, or a task ("Mirror pull requests…", "Release Steps 5.4.6"). A condition or trigger ("when…", "after…", "on Windows") appears in about a third.
+- **Not every Bug is a bug:** 2 of 50 are a question / feature request and a release checklist. Expected noise for the teacher to label as incomplete.
+- **Attachments:** one report with `[image]` in 50; screenshots in the public data are rare.
+
+Rare parts to top up in sampling (T1.11) and synthetic data (T1.12): explicit steps, explicit expected result, version or build number in the text, headed templates (filled, partially filled, empty), screenshot-only results.
+
+Preprocessing gaps found on the way (1% sample, share of descriptions): HTML entities such as `&#x27;` — 1.2% (Apache, Jira Cloud); Jira forced line break `\` — 0.5%; unified diffs (`@@ -1,7 +1,7 @@`) are not shortened like code blocks — 0.2%.
