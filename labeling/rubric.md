@@ -49,15 +49,17 @@ Not labelled here, decided by code: the test environment (stand / production) an
 
 ## 2. `summary_where` — where it happens
 
-**Yes:** the summary names a place in the product — a screen, page, dialog, feature, component, endpoint, background job, module or class. A leading `Area:` word counts when it names a place ("Checkout: …"); a leading word that names the defect ("Crash: …", "Regression: …") does not.
+**Yes:** the summary names a specific part of the product — a screen, page, dialog, feature, component, endpoint, background job, module or class, or an object or entity inside the product (a parcel label, a route stop, a form field, a game item). A leading `Area:` word counts when it names a part ("Checkout: …"); a leading word that names the defect ("Crash: …", "Regression: …") does not.
 
-**No:** only the product as a whole ("the app", "Parcelwise", "the system"), or no place at all.
+**No:** only the product as a whole ("the app", "Parcelwise", "the system"), only a third-party library or tool, or no part at all.
 
 | Summary | Label | Why |
 |---|---|---|
 | `Parcelwise app freezes after login` | no | The whole product is not a place. (`summary_when` is yes.) |
 | `Crash: NullPointerException in ManifestExporter.write` | yes | The class and method are the place; `Crash:` is the what, not the where. |
 | `Wrong VAT on invoice PDF` | yes | The invoice PDF is the place. |
+| `Route stop markers overlap at high zoom` | yes | Route stop markers are objects inside the product. |
+| `Upgrade the PDF library to 3.1` | no | A third-party library is not part of the product. |
 
 ## 3. `summary_when` — action or condition
 
@@ -101,6 +103,8 @@ Looked for in the description only.
 
 - the correct behaviour is stated, under any heading or in prose ("should", "expected", "instead of");
 - the correct behaviour follows **unambiguously and concretely** from a negation: "the Print button does nothing" → it should print; "the app crashes on login" → it should log in;
+- a crash, an exception, a hang or a failed run: the expected result is that the action completes normally, so this is "yes";
+- a working comparison: "the same test passes over plain sockets", "worked in 2.7.1", "fine with 10 couriers" — the working case is the expected result;
 - only `[image]` under an expected-result heading.
 
 **No:**
