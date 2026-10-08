@@ -1,0 +1,1 @@
+"""Bug report completeness checker."""

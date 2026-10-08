@@ -8,6 +8,7 @@ docs/decisions.md
 
 # Python
 .venv/
+.uv-cache/
 __pycache__/
 .pytest_cache/
 .ruff_cache/
