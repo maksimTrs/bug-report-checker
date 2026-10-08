@@ -28,6 +28,22 @@ _MEDIA = re.compile(
 )
 _MD_LINK = re.compile(r"\[([^\]\n]+)\]\(https?://[^)\s]+\)")
 _URL = re.compile(r"<?https?://([^/\s<>\"'()]+)(?:[^\s<>\"']*[^\s<>\"'.,;:!?)\]])?>?")
+CODE_LINES = 5
+TRUNCATED = "[… truncated]"
+_FENCE = re.compile(r"^([ \t]*```[^`\n]*\n)(.*?)(\n[ \t]*```[ \t]*)$", re.DOTALL | re.M)
+_JIRA_CODE = re.compile(
+    r"\{(code|noformat)(?::[^}\n]*)?\}(.*?)\{\1\}", re.DOTALL | re.IGNORECASE
+)
+# Unfenced traces: JVM / .NET / JS frames, or a Python traceback up to its error line.
+_STACK_FRAME = (
+    r"[ \t]*(?:at [\w$.<>/@-]+ ?\(.*|Caused by: .*|Suppressed: .*"
+    r"|\.\.\. \d+ (?:more|common frames omitted))"
+)
+_STACKTRACE = re.compile(
+    rf"(?:^{_STACK_FRAME}(?:\n|\Z))+"
+    r"|^Traceback \(most recent call last\):[ \t]*\n(?:[ \t]+.*(?:\n|\Z))+",
+    re.MULTILINE,
+)
 
 
 def strip_html_comments(text: str) -> str:
@@ -54,3 +70,34 @@ def replace_links(text: str) -> str:
     """Links -> `[link: host]`; the host keeps the environment signal (stand, prod)."""
     text = _MD_LINK.sub(r"\1", text)
     return _URL.sub(r"[link: \1]", text)
+
+
+def _head(code: str) -> str:
+    lines = code.split("\n")
+    if len(lines) <= CODE_LINES:
+        return code
+    return "\n".join([*lines[:CODE_LINES], TRUNCATED])
+
+
+def _jira_block(m: re.Match) -> str:
+    code = m.group(2).strip("\n")
+    if "\n" not in code:
+        return f"`{code}`"
+    return f"```\n{_head(code)}\n```"
+
+
+def _trace(m: re.Match) -> str:
+    trace = m.group(0)
+    end = "\n" if trace.endswith("\n") else ""
+    return _head(trace.removesuffix("\n")) + end
+
+
+def truncate_code(text: str) -> str:
+    """Code blocks and stack traces -> first lines + `[… truncated]`.
+
+    The model only needs to see that code or a trace is attached. Jira `{code}` and
+    `{noformat}` become markdown fences, as in YouTrack and GitHub.
+    """
+    text = _FENCE.sub(lambda m: m.group(1) + _head(m.group(2)) + m.group(3), text)
+    text = _JIRA_CODE.sub(_jira_block, text)
+    return _STACKTRACE.sub(_trace, text)

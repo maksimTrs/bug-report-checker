@@ -6,7 +6,12 @@ from bug_report_checker.preprocess import (
     strip_html_comments,
     strip_strikethrough,
     strip_summary_tags,
+    truncate_code,
 )
+
+LINES = "\n".join(f"line {i}" for i in range(1, 9))
+HEAD = "\n".join(f"line {i}" for i in range(1, 6)) + "\n[… truncated]"
+FRAMES = "\n".join(f"\tat com.example.Foo.bar{i}(Foo.java:{i})" for i in range(8))
 
 
 @pytest.mark.parametrize(
@@ -92,3 +97,59 @@ def test_replace_media(text, expected):
 )
 def test_replace_links(text, expected):
     assert replace_links(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (f"Log:\n```\n{LINES}\n```\nAfter", f"Log:\n```\n{HEAD}\n```\nAfter"),
+        ("```python\nx = 1\ny = 2\n```", "```python\nx = 1\ny = 2\n```"),
+        (f"{{code:java}}\n{LINES}\n{{code}}", f"```\n{HEAD}\n```"),
+        ("{noformat}\nERROR 1\nERROR 2\n{noformat}", "```\nERROR 1\nERROR 2\n```"),
+        ("Call {code}save(){code} twice", "Call `save()` twice"),
+        ("```\nunclosed\nfence", "```\nunclosed\nfence"),
+    ],
+    ids=["fence-long", "fence-short", "jira-code", "jira-noformat", "inline", "open"],
+)
+def test_truncate_code_blocks(text, expected):
+    assert truncate_code(text) == expected
+
+
+def test_truncate_code_bare_java_stacktrace_keeps_message():
+    text = f"java.lang.IllegalStateException: boom\n{FRAMES}\nSteps: open"
+    head = "\n".join(FRAMES.split("\n")[:5])
+    expected = (
+        f"java.lang.IllegalStateException: boom\n{head}\n[… truncated]\nSteps: open"
+    )
+    assert truncate_code(text) == expected
+
+
+def test_truncate_code_counts_caused_by_and_more_as_trace():
+    text = (
+        "\tat a.B.c(B.java:1)\n\tat a.B.d(B.java:2)\n"
+        "Caused by: java.io.IOException: closed\n"
+        "\tat a.C.e(C.java:3)\n\tat a.C.f(C.java:4)\n\t... 12 more"
+    )
+    expected = "\n".join(text.split("\n")[:5]) + "\n[… truncated]"
+    assert truncate_code(text) == expected
+
+
+def test_truncate_code_bare_python_traceback_keeps_error_line():
+    frames = "".join(
+        f'  File "app.py", line {i}, in f{i}\n    f{i}()\n' for i in range(4)
+    )
+    text = f"Traceback (most recent call last):\n{frames}ValueError: bad"
+    head = "\n".join(text.split("\n")[:5])
+    assert truncate_code(text) == f"{head}\n[… truncated]\nValueError: bad"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "We met at home (twice) and at work (once).",
+        "\tat a.B.c(B.java:1)\n\tat a.B.d(B.java:2)",
+        "Plain text\nwith lines",
+    ],
+)
+def test_truncate_code_leaves_short_or_plain_text(text):
+    assert truncate_code(text) == text
