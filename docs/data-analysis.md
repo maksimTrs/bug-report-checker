@@ -61,3 +61,31 @@ Issue types absent from the mapping: 9,739 issues, almost all Sonatype "Publishi
 | **Total** | **1,522,538** | **1,472,410** (96.7%) |
 
 Mojang is a bug-only tracker (every issue is a Bug) and holds 28% of all bugs; Apache holds 34%. Sampling (T1.11) has to stratify by tracker so these two do not dominate.
+
+## Length in Laya tokens
+
+Bugs with a description, after preprocessing (`preprocess(..., jira=True)`), counted the way Laya counts the state: JSON of `{summary, description}`, tokenized without special tokens by the `laya-typed-decisions` tokenizer. Random 5% sample, seed 0: `python -m bug_report_checker.dataset.token_stats data/raw/bugs.jsonl.gz <checkpoint>/tokenizer/tokenizer.json 0.05`.
+
+The state gets `max_len - question head - 1` tokens. For `laya-typed-decisions` (`max_len` 1024, `head_max_len` 256) the worst case is 767; 895 assumes a 128-token head.
+
+| Tracker | Sample | Median | p90 | p99 | > 767 | > 895 |
+|---|---:|---:|---:|---:|---:|---:|
+| Apache | 25,134 | 157 | 540 | 2,475 | 5.8% | 4.4% |
+| Hyperledger | 340 | 192 | 603 | 2,918 | 8.2% | 7.1% |
+| IntelDAOS | 175 | 261 | 918 | 2,792 | 15.4% | 11.4% |
+| JFrog | 420 | 187 | 587 | 3,380 | 6.7% | 5.0% |
+| Jira | 6,189 | 155 | 418 | 1,345 | 2.8% | 1.8% |
+| JiraEcosystem | 848 | 112 | 361 | 762 | 1.1% | 0.8% |
+| MariaDB | 1,203 | 256 | 809 | 2,314 | 11.0% | 8.3% |
+| Mindville | 47 | 148 | 335 | 419 | 0.0% | 0.0% |
+| Mojang | 20,897 | 79 | 201 | 748 | 1.0% | 0.8% |
+| MongoDB | 2,301 | 142 | 479 | 1,988 | 4.3% | 3.4% |
+| Qt | 5,301 | 140 | 403 | 2,125 | 3.7% | 2.9% |
+| RedHat | 7,656 | 144 | 482 | 1,776 | 4.0% | 3.1% |
+| Sakai | 1,723 | 116 | 383 | 1,361 | 2.7% | 1.9% |
+| SecondLife | 60 | 144 | 281 | 639 | 0.0% | 0.0% |
+| Sonatype | 355 | 163 | 593 | 2,695 | 4.8% | 3.4% |
+| Spring | 1,318 | 178 | 502 | 1,577 | 3.7% | 3.0% |
+| **Total** | **73,967** | **123** | **424** | **1,810** | **3.7%** | **2.9%** |
+
+96% of bugs fit one 1024-token sequence even with the largest question head; the 3–4% tail goes through `predict_long` (sliding windows). Mojang reports are the shortest (median 79), MariaDB and IntelDAOS the longest — sampling (T1.11) should keep length buckets, not only trackers.
