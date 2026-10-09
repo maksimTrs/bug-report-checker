@@ -7,6 +7,6 @@ from bug_report_checker.issue import BUG, Issue
 TRIGGER_STATES = ("Submitted", "Open", "In Progress")
 
 
-def should_check(issue: Issue) -> bool:
+def should_check(issue: Issue, states: tuple[str, ...] = TRIGGER_STATES) -> bool:
     """Only bugs in a trigger state; a closed issue has no state."""
-    return issue.type == BUG and issue.state in TRIGGER_STATES
+    return issue.type == BUG and issue.state in states

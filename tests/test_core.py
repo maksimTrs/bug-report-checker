@@ -21,3 +21,8 @@ def test_bug_in_another_state_or_closed_is_skipped(state):
 
 def test_non_bug_is_skipped_in_any_state():
     assert not should_check(issue(type_=OTHER, state="Open"))
+
+
+def test_team_states_replace_the_defaults():
+    assert should_check(issue(state="Triaged"), states=("Triaged",))
+    assert not should_check(issue(state="Open"), states=("Triaged",))
