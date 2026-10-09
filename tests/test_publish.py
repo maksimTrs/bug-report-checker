@@ -10,12 +10,13 @@ from bug_report_checker.publish import (
     SKIPPED,
     UPDATED,
     Comments,
+    bot_version,
     fingerprint,
     run_check,
 )
 
 STATE = {"summary": "Export crashes", "description": "1. Open"}
-FP = fingerprint(STATE, "Open", Config())
+FP = fingerprint(STATE, "Open", Config(), "v1")
 
 
 class FakeGitHub:
@@ -114,7 +115,21 @@ def test_own_comment_is_found_past_the_first_page():
     ],
 )
 def test_fingerprint_changes_with_text_status_and_config(change):
-    assert fingerprint(*change(STATE, "Open", Config())) != FP
+    assert fingerprint(*change(STATE, "Open", Config()), "v1") != FP
+
+
+def test_fingerprint_changes_with_the_bot_version():
+    """An upgrade re-checks unchanged issues: no stale verdict survives it."""
+    assert fingerprint(STATE, "Open", Config(), "v2") != FP
+
+
+def test_bot_version_follows_the_code_and_the_model(tmp_path):
+    (tmp_path / "rules.py").write_text("STEPS = 1")
+    v = bot_version("m", "r1", tmp_path)
+    assert v == bot_version("m", "r1", tmp_path)
+    assert v != bot_version("m", "r2", tmp_path)
+    (tmp_path / "rules.py").write_text("STEPS = 2")
+    assert v != bot_version("m", "r1", tmp_path)
 
 
 def test_api_error_is_raised():

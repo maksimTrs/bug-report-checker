@@ -11,6 +11,7 @@ import json
 import re
 from collections.abc import Callable
 from dataclasses import asdict
+from pathlib import Path
 
 import httpx
 
@@ -23,9 +24,20 @@ PER_PAGE = 100  # the REST API maximum
 CREATED, UPDATED, SKIPPED, SILENT = "created", "updated", "skipped", "silent"
 
 
-def fingerprint(state: dict[str, str], status: str, config: Config) -> str:
-    """Everything the comment depends on: the text, the status, the settings."""
-    data = json.dumps([state, status, asdict(config)], sort_keys=True)
+def bot_version(model: str, revision: str, src: Path = Path(__file__).parent) -> str:
+    """The code and the model behind a verdict. An upgrade changes it, so issues
+    whose text did not change are re-checked rather than left with a stale comment."""
+    h = hashlib.sha256(f"{model}@{revision}".encode())
+    for f in sorted(src.glob("*.py")):
+        h.update(f.read_bytes())
+    return h.hexdigest()[:16]
+
+
+def fingerprint(
+    state: dict[str, str], status: str, config: Config, version: str
+) -> str:
+    """Everything the comment depends on: text, status, settings and the bot."""
+    data = json.dumps([state, status, asdict(config), version], sort_keys=True)
     return hashlib.sha256(data.encode()).hexdigest()[:16]
 
 

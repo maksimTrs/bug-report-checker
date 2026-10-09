@@ -18,7 +18,7 @@ from bug_report_checker.core import should_check
 from bug_report_checker.decide import decide
 from bug_report_checker.github import from_github
 from bug_report_checker.preprocess import preprocess
-from bug_report_checker.publish import Comments, fingerprint, run_check
+from bug_report_checker.publish import Comments, bot_version, fingerprint, run_check
 
 API = "https://api.github.com"
 API_VERSION = "2022-11-28"
@@ -37,7 +37,11 @@ def read_config(client: httpx.Client, repo: str) -> Config:
 
 
 def run(
-    event: dict, repo: str, client: httpx.Client, load_agent: Callable[[], object]
+    event: dict,
+    repo: str,
+    client: httpx.Client,
+    load_agent: Callable[[], object],
+    version: str,
 ) -> str:
     """What happened: "not checked" or a `publish` outcome. The model is loaded
     only when a check needs it.
@@ -64,7 +68,7 @@ def run(
 
     return run_check(
         Comments(client, repo, event["issue"]["number"]),
-        fingerprint(state, issue.state, config),
+        fingerprint(state, issue.state, config, version),
         make_body,
         comment_on_success=config.comment_on_success,
     )
@@ -80,14 +84,20 @@ def main() -> None:
         "X-GitHub-Api-Version": API_VERSION,
     }
 
+    model, revision = os.environ["MODEL"], os.environ["MODEL_REVISION"]
+
     def load_agent():
-        return laya.load(
-            os.environ["MODEL"], device="cpu", revision=os.environ["MODEL_REVISION"]
-        )
+        return laya.load(model, device="cpu", revision=revision)
 
     with httpx.Client(base_url=API, headers=headers, timeout=30) as client:
         try:
-            outcome = run(event, os.environ["GITHUB_REPOSITORY"], client, load_agent)
+            outcome = run(
+                event,
+                os.environ["GITHUB_REPOSITORY"],
+                client,
+                load_agent,
+                bot_version(model, revision),
+            )
         except ConfigError as e:
             print(f"::error file={FILE}::{e}")
             sys.exit(1)

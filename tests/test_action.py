@@ -58,7 +58,7 @@ def run_with(server, ev, loads):
         loads.append(1)
         return FakeAgent()
 
-    return run(ev, "octo/app", client(server), load_agent)
+    return run(ev, "octo/app", client(server), load_agent, "v1")
 
 
 def test_bug_gets_a_comment():
