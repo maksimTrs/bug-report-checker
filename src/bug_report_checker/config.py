@@ -27,7 +27,7 @@ class ConfigError(ValueError):
 class Config:
     bug_labels: tuple[str, ...] = BUG_LABELS
     status_labels: tuple[str, ...] = TRIGGER_STATES
-    threshold: float = 0.85  # below this confidence a check says "not sure" (T3.4)
+    threshold: float = 0.827  # below this confidence a check says "not sure" (T3.4)
     comment_on_success: bool = True
     build_version_pattern: str | None = None  # the team's build format, if any
     environments: tuple[str, ...] = ()  # names of test stands, such as "staging"
