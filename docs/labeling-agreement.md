@@ -61,3 +61,26 @@ Agreement of each teacher with the final labels:
 | expected | 97/100 | 93/100 |
 | actual | 98/100 | 97/100 |
 | build_version | 100/100 | 96/100 |
+
+## Eval v2
+
+Eval v1 was read while planning run 3 (the run 2 misses on it shaped a draft top-up), so it now serves as dev and a new eval was built: `eval/eval_v2.jsonl`, 170 reports from 115 projects that no other set uses.
+
+- **Random core, 100 reports** (`"core": true`), drawn by the same scheme as eval v1 and set aside before any label was seen. Accuracy and precision are read here.
+- **70 added reports** where Sonnet found the actual or the expected result missing, so the two weak checks have enough cases for recall: 41 reports without an actual result, 53 without an expected one (10 and 12 of them in the core). Mojang, IntelDAOS and SecondLife have no unused project left, so they are absent.
+- **Labels:** Opus on all 170, the 63 blocker disagreements with Sonnet (59 reports) decided against the rubric: 59 kept Opus, 4 took Sonnet (`actual`: an improvement or a "should" with no observed result). E-mail addresses in five reports are replaced with `[email]`.
+
+Sonnet vs final labels on the random core (on all 170 the added part inflates disagreement, since it was picked by Sonnet's answers):
+
+| Check | Agreement | Minority class | Minority agreement |
+|---|---|---|---|
+| summary_what | 83/100 | no (29) | 13/29 |
+| summary_where | 94/100 | no (10) | 7/10 |
+| summary_when | 87/100 | yes (42) | 36/42 |
+| steps | 92/100 | yes (47) | 41/47 |
+| expected | 90/100 | no (12) | 9/12 |
+| actual | 96/100 | no (10) | 6/10 |
+| build_version | 100/100 | yes (18) | 18/18 |
+
+- Blockers agree on 90–100 of 100, above the 85% bar. `summary_what` (83) is again the weakest and stays a hint.
+- On the added reports Sonnet calls the expected result missing far more often than Opus: 32 of the 36 `expected` disagreements are Sonnet "no", Opus "yes" — mostly crashes, errors and negations whose correct behaviour is plain, which the rubric counts as stated. Train labels come from Sonnet, so they carry the same lean.
