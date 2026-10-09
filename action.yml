@@ -1,0 +1,46 @@
+name: Bug report checker
+description: Checks whether a bug report is complete and comments with what is missing.
+branding:
+  icon: check-square
+  color: green
+
+inputs:
+  github-token:
+    description: Token that reads the config and writes the comment (needs `issues: write`).
+    default: ${{ github.token }}
+  model:
+    description: Hugging Face model id.
+    default: ippo123/bug-report-checker
+  model-revision:
+    description: Model commit; pinned so a new upload never changes results silently.
+    default: 200d91fcb5c4e2915c15d4d6410c1d5386c76a10
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      with:
+        python-version: "3.13"
+
+    - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      with:
+        working-directory: ${{ github.action_path }}
+        enable-cache: true
+
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/hf-cache
+        key: bug-report-checker-model-${{ inputs.model-revision }}
+
+    # Runtime only: no dev tools, no dataset tooling; CPU torch from the lock file.
+    - shell: bash
+      run: uv sync --project "$GITHUB_ACTION_PATH" --frozen --no-default-groups
+
+    - shell: bash
+      run: uv run --project "$GITHUB_ACTION_PATH" --no-sync python -m bug_report_checker.action
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        MODEL: ${{ inputs.model }}
+        MODEL_REVISION: ${{ inputs.model-revision }}
+        HF_HOME: ${{ runner.temp }}/hf-cache
+        HF_HUB_DISABLE_TELEMETRY: "1"

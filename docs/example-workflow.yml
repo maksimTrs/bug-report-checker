@@ -1,0 +1,22 @@
+# Copy to .github/workflows/bug-checker.yml in the repository to check.
+name: Bug report check
+
+on:
+  issues:
+    types: [opened, edited, labeled, unlabeled, typed, untyped, reopened]
+
+permissions:
+  contents: read # the config, .github/bug-checker.yml
+  issues: write # the comment
+
+# Edits in a row: only the last check runs to the end.
+concurrency:
+  group: bug-checker-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: maksimTrs/bug-report-checker@main # pin to a commit SHA in real use
