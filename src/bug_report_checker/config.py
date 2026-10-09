@@ -14,6 +14,9 @@ from bug_report_checker.core import TRIGGER_STATES
 from bug_report_checker.github import BUG_LABELS
 
 FILE = ".github/bug-checker.yml"
+# Run 2's confidence max(p, 1 - p) peaks at 0.8635 on 3,794 answers; at 0.85 the bot
+# still decides 59% of them, at 0.86 only 0.4%.
+MAX_THRESHOLD = 0.85
 
 
 class ConfigError(ValueError):
@@ -41,8 +44,12 @@ def _labels(key: str, value: object) -> tuple[str, ...]:
 def _threshold(key: str, value: object) -> float:
     # bool is an int in Python; `threshold: true` is a typo, not 1.
     number = isinstance(value, int | float) and not isinstance(value, bool)
-    if not number or not 0.5 <= value <= 1:
-        raise ConfigError(f"{FILE}: '{key}' must be a number from 0.5 to 1")
+    if not number or not 0.5 <= value <= MAX_THRESHOLD:
+        raise ConfigError(
+            f"{FILE}: '{key}' must be a number from 0.5 to {MAX_THRESHOLD}: the"
+            " model's confidence tops out at about 0.86 (it was trained on soft"
+            " labels), so a higher threshold makes almost every check 'not sure'"
+        )
     return float(value)
 
 

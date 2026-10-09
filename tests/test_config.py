@@ -27,7 +27,7 @@ def test_full_config_from_file(tmp_path):
     path.write_text(
         "bug_labels: [defect]\n"
         "status_labels: [New, Triaged]\n"
-        "threshold: 0.9\n"
+        "threshold: 0.85\n"
         "comment_on_success: false\n"
         "build_version_pattern: 'v\\d+\\.\\d+'\n"
         "environments: [staging, qa1]\n",
@@ -36,7 +36,7 @@ def test_full_config_from_file(tmp_path):
     assert load_config(path) == Config(
         bug_labels=("defect",),
         status_labels=("New", "Triaged"),
-        threshold=0.9,
+        threshold=0.85,
         comment_on_success=False,
         build_version_pattern=r"v\d+\.\d+",
         environments=("staging", "qa1"),
@@ -44,7 +44,7 @@ def test_full_config_from_file(tmp_path):
 
 
 def test_partial_config_keeps_other_defaults():
-    assert parse_config("threshold: 1") == Config(threshold=1.0)
+    assert parse_config("threshold: 0.5") == Config(threshold=0.5)
 
 
 @pytest.mark.parametrize(
@@ -52,9 +52,11 @@ def test_partial_config_keeps_other_defaults():
     [
         ("- a\n- b", "must be a mapping of keys"),
         ("treshold: 0.9", "unknown key 'treshold'"),
-        ("threshold: high", "'threshold' must be a number from 0.5 to 1"),
-        ("threshold: 0.3", "'threshold' must be a number from 0.5 to 1"),
-        ("threshold: true", "'threshold' must be a number from 0.5 to 1"),
+        ("threshold: high", "'threshold' must be a number from 0.5 to 0.85"),
+        ("threshold: 0.3", "'threshold' must be a number from 0.5 to 0.85"),
+        ("threshold: true", "'threshold' must be a number from 0.5 to 0.85"),
+        # The model's confidence tops out at ~0.86: above it the bot goes silent.
+        ("threshold: 0.9", "tops out at about 0.86"),
         ("comment_on_success: 'no'", "'comment_on_success' must be true or false"),
         ("bug_labels: bug", "'bug_labels' must be a list of non-empty strings"),
         ("environments: [dev1, '']", "'environments' must be a list of non-empty"),
