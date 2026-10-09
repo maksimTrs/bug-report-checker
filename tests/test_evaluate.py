@@ -106,3 +106,25 @@ def test_gate_fails_when_a_check_loses_precision():
     case = _gate_case({0, 1}, {0, 1, 2}, {"steps": {0, 1, 2, 5}})
 
     assert any(reason.startswith("steps") for reason in gate(*case))
+
+
+def test_gate_fails_on_more_false_missing_among_the_random_reports():
+    from bug_report_checker.evaluate import gate
+
+    # one more complete report called "missing" on steps: 1 of 5 present = 20 points
+    rows, old, new = _gate_case({0, 1}, {0, 1, 2}, {"steps": {0, 1, 2, 5}})
+    random_ids = {r["id"] for r in rows}
+
+    reasons = gate(rows, old, new, random_ids)
+
+    assert "steps: false missing on present rose by 20.0 points" in reasons
+
+
+def test_gate_counts_false_missing_only_on_the_random_reports():
+    from bug_report_checker.evaluate import gate
+
+    rows, old, new = _gate_case({0, 1}, {0, 1, 2}, {"steps": {0, 1, 2, 5}})
+
+    reasons = gate(rows, old, new, random_ids={"0", "6"})
+
+    assert not any("false missing" in reason for reason in reasons)

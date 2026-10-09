@@ -10,6 +10,7 @@ Usage:
   python -m bug_report_checker.evaluate report <eval.jsonl> <name>=<preds.jsonl> ...
   python -m bug_report_checker.evaluate bot <eval.jsonl> <preds.jsonl> <threshold>
   python -m bug_report_checker.evaluate gate <dev.jsonl> <old.jsonl> <new.jsonl>
+         [<random.jsonl>]
 """
 
 import json
@@ -25,7 +26,7 @@ from bug_report_checker.questions import laya_questions
 Z95 = 1.96
 TARGETS = ("expected", "actual")  # run 3 exists to raise recall of these (D18)
 BLOCKERS = ("steps", "expected", "actual", "build_version")
-MAX_DROP = 0.05  # recall or precision of "missing", any check
+MAX_DROP = 0.05  # recall / precision of "missing" or false "missing", any check
 MAX_ECE_RISE = 0.03  # blockers
 
 
@@ -79,14 +80,28 @@ def bot_metrics(gold: list[bool], p_true: list[float], threshold: float) -> dict
     }
 
 
-def gate(rows: list[dict], old: list[dict], new: list[dict]) -> list[str]:
+def _false_missing(gold: list[bool], p_true: list[float]) -> float:
+    """Share of present parts the model calls missing."""
+    present = [p for g, p in zip(gold, p_true, strict=True) if g]
+    return sum(p < 0.5 for p in present) / len(present) if present else 0.0
+
+
+def gate(
+    rows: list[dict],
+    old: list[dict],
+    new: list[dict],
+    random_ids: set[str] | None = None,
+) -> list[str]:
     """Why `new` may not replace `old` under the rule set before training (D18).
 
     An empty list means it may. Precision of a model that never says "missing" counts
     as 0, so a model that stops answering "missing" cannot pass on precision.
+    Precision barely moves on a set rich in gaps, so false "missing" on present parts
+    is checked separately on `random_ids`, the reports drawn at random (D20).
     """
     old_by_id = {x["id"]: x for x in old}
     new_by_id = {x["id"]: x for x in new}
+    sample = [r for r in rows if r["id"] in (random_ids or set())]
     reasons = []
     for check in CHECKS:
         gold = [r[check] for r in rows]
@@ -98,6 +113,15 @@ def gate(rows: list[dict], old: list[dict], new: list[dict]) -> list[str]:
             drop = (a[key] or 0.0) - (b[key] or 0.0)
             if drop > MAX_DROP:
                 reasons.append(f"{check}: {key} fell by {100 * drop:.1f} points")
+        if sample:
+            gold_s = [r[check] for r in sample]
+            rise = _false_missing(
+                gold_s, [new_by_id[r["id"]][check] for r in sample]
+            ) - _false_missing(gold_s, [old_by_id[r["id"]][check] for r in sample])
+            if rise > MAX_DROP:
+                reasons.append(
+                    f"{check}: false missing on present rose by {100 * rise:.1f} points"
+                )
         if check in BLOCKERS and b["ece"] - a["ece"] > MAX_ECE_RISE:
             reasons.append(f"{check}: ECE rose by {b['ece'] - a['ece']:.3f}")
     return reasons
@@ -190,7 +214,8 @@ def main(argv: list[str]) -> None:
     elif argv[0] == "bot":
         print(bot_report(_read(argv[1]), _read(argv[2]), float(argv[3])))
     elif argv[0] == "gate":
-        reasons = gate(_read(argv[1]), _read(argv[2]), _read(argv[3]))
+        random_ids = {r["id"] for r in _read(argv[4])} if len(argv) > 4 else None
+        reasons = gate(_read(argv[1]), _read(argv[2]), _read(argv[3]), random_ids)
         print("\n".join(reasons) or "pass")
         raise SystemExit(1 if reasons else 0)
     else:
