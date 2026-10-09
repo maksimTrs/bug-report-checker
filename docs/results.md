@@ -1,14 +1,67 @@
 # Results
 
-Fine-tuned Laya (`typed-decisions` checkpoint, 7 `noul` questions) on the frozen eval set: 100 public bug reports from projects that never appear in train, labelled by Opus with disagreements adjudicated ([labeling-agreement.md](labeling-agreement.md)).
+Fine-tuned Laya (`typed-decisions` checkpoint, 7 `noul` questions). The headline numbers are on **eval v2**: 170 public bug reports from 115 projects that no other set touches, labelled by Opus with Sonnet disagreements adjudicated ([labeling-agreement.md](labeling-agreement.md)).
 
 ## Setup
 
-- **Two training runs.** Run 1: 300 reports, hard targets. It learned each check's prior and missed the rare "missing" cases (expected, actual), and was overconfident (mean confidence 0.94–0.99). Run 2: 544 reports, topped up with public reports that lack an expected or actual result, soft targets (0.95 / 0.05).
-- **Selection without eval.** The runs were compared on a separate dev set (122 public reports, not in train, not from eval projects) by recall of "missing" on the four blockers and ECE. Run 2 won; eval was then scored once, on run 2. Run 1 had been scored on eval before that rule was set — its weak checks are what motivated run 2 — and is shown for reference.
-- **Metrics.** "Missing" is the positive class: the bot exists to say what a report lacks, and labels lean towards "present", so plain accuracy flatters a model that always says yes. That baseline is in every table. Intervals are 95% Wilson; with 100 reports an accuracy near 80% is ±8 points, and recall on a check with 13–15 missing cases is far wider.
+- **Three training runs.** Run 1: 300 reports, hard targets — learned each check's prior, missed the rare "missing" cases, overconfident. Run 2: 544 reports, topped up with reports that lack an expected or actual result, soft targets (0.95 / 0.05), Sonnet labels. Run 3: 843 reports — run 2's set relabelled by Opus plus 449 short, restating or steps-only reports, all Opus.
+- **Selection without eval.** Each new run had to beat the previous one on a dev set by a rule written before training. Run 2 beat run 1. Run 3 lost to run 2 (below), so **run 2 is the model**.
+- **Why a second eval.** While planning run 3, run 2's misses on eval v1 were read and a top-up was drafted from them. To keep the headline honest, eval v1 became part of dev and eval v2 was built and frozen before any run-3 data was chosen. Eval v1 results stay below for the record.
+- **Eval v2 = random core + enrichment.** 100 reports drawn at random (`"core": true`), plus 70 picked because Sonnet found the actual or expected result missing, so those two checks have 41 and 53 missing cases instead of ~10. Recall uses all 170; accuracy, precision and the bot's errors on complete reports use the core 100 only. The 70 lean to gaps Sonnet notices, and run 2 learned from Sonnet labels, so recall on the enriched part may flatter run 2.
+- **One GPU for all.** The run 2 checkpoint scored on eval v1 was lost; run 2 was retrained with the same data and seed next to run 3, and base, run 2 and run 3 predicted dev and eval v2 on one Kaggle T4. The retrained run 2 is the model scored on eval v2 and published.
+- **Metrics.** "Missing" is the positive class: the bot exists to say what a report lacks, and labels lean towards "present", so plain accuracy flatters a model that always says yes. Intervals are 95% Wilson.
 
-## Blockers at a glance
+## Eval v2: blockers at a glance
+
+| Check | Missing (all / core) | Recall missing, base (all) | Recall missing, run 2, all (95% CI) | Recall missing, run 2, core (95% CI) | Precision missing, run 2 (core) | Accuracy, run 2 (core) | ECE, run 2 (all) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| steps | 108 / 53 | 34% | 98% (93–99) | 98% (90–100) | 76% | 83% | 0.019 |
+| build_version | 142 / 82 | 34% | 94% (89–97) | 90% (82–95) | 94% | 87% | 0.099 |
+| expected | 53 / 12 | 38% | 57% (43–69) | 50% (25–75) | 46% | 87% | 0.046 |
+| actual | 41 / 10 | 54% | 61% (46–74) | 50% (24–76) | 83% | 94% | 0.046 |
+
+- **Steps and build version** carry the bot: almost every report without them is caught. The cost is on steps — on the random core it calls steps missing in 12 of 47 reports that have them (precision 76%).
+- **Expected and actual** stay the weak checks: on the random core run 2 finds half of the reports without them (6 of 12, 5 of 10). The 57% and 61% on all 170 are likely optimistic — the added 70 were picked by Sonnet, whose labels run 2 learned from — so read them as an upper end, not as a gain over eval v1's 47% and 38%. Precision of "missing" on `expected` is 46% on the core: half of its "no expected result" calls are wrong.
+- Always answering "present" scores 88–90% accuracy on expected and actual on the core; run 2 is at 87% and 94%. Recall, not accuracy, is the measure here.
+
+## Eval v2: what the bot would say
+
+Run 2's "not sure" threshold is 0.827 (fitted by laya on its calibration slice for a 10% error target). Random core, 100 reports:
+
+| Check | Coverage | Accuracy decided | Missing → missing / not sure / present | Present → missing |
+|---|---|---|---|---|
+| summary_what | 92% | 83% | 8 / 5 / 16 of 29 | 0 of 71 |
+| summary_where | 91% | 91% | 1 / 1 / 8 of 10 | 0 of 90 |
+| summary_when | 81% | 79% | 31 / 13 / 14 of 58 | 3 of 42 |
+| steps | 88% | 85% | 50 / 2 / 1 of 53 | 12 of 47 |
+| expected | 85% | 93% | 5 / 3 / 4 of 12 | 2 of 88 |
+| actual | 98% | 94% | 4 / 1 / 5 of 10 | 1 of 90 |
+| build_version | 87% | 92% | 70 / 9 / 3 of 82 | 4 of 18 |
+
+- The costly error — "missing" on a part that is there — is rare everywhere except steps (12 of 47) and build version (4 of 18).
+- On all 170, 12 of 53 reports without an expected result and 15 of 41 without an actual one are confidently called complete; 17 and 4 more land on "not sure".
+
+## Run 3 and why it was not chosen
+
+Rule fixed before training (dev v3: dev + eval v1, 372 reports): recall of "missing" must rise on expected and actual; no check may lose more than 5 points of recall or precision of "missing", or of false "missing" on dev's 100 random reports; no blocker's ECE may rise more than 0.03. Run 3 failed five conditions: expected recall fell (70% → 66%), summary_where recall −9, summary_what precision −5.1, steps ECE +0.036, build_version false "missing" +2 of 24.
+
+Run 3 was more precise — expected precision 60% → 78% on dev, false "missing" on steps 14/44 → 4/44 — and found more missing actual results (72% → 78%). Opus labels made it more conservative on `expected`, trading the recall run 3 was meant to add for precision. Eval v2, scored after the decision, agrees (its Sonnet-picked part leans towards run 2, so this is not a neutral tiebreak): recall on expected 49% vs run 2's 57%, actual 68% vs 61%, steps precision on the core 85% vs 76%.
+
+| Eval v2, recall missing (all 170) | Base | Run 2 | Run 3 |
+|---|---:|---:|---:|
+| summary_what | 42% | 45% | 74% |
+| summary_where | 23% | 27% | 23% |
+| summary_when | 18% | 78% | 87% |
+| steps | 34% | 98% | 92% |
+| expected | 38% | 57% | 49% |
+| actual | 54% | 61% | 68% |
+| build_version | 34% | 94% | 95% |
+
+## Eval v1: the original run 2 (now part of dev)
+
+100 random public reports, the first frozen eval; scored once on the original run 2, before it was read for run 3 planning. Kept as the record of that run.
+
+### Blockers at a glance
 
 Recall of "missing" at the 0.5 cut (95% CI):
 
@@ -23,7 +76,7 @@ Recall of "missing" at the 0.5 cut (95% CI):
 - **Expected and actual** remain weak. Eval has few such reports (15 and 13), so the intervals are wide, but dev (75% and 93%) overstates them: most of dev's reports without an actual result were mined for that purpose and read as feature requests filed as bugs, which is the easy case. Eval's were not selected that way.
 - **Calibration** improved from run 1 everywhere except `actual` (0.101 → 0.103): ECE 0.06–0.10, mean confidence 0.83–0.86.
 
-## What the bot would say
+### What the bot would say
 
 Below a confidence of 0.824 (fitted by laya on the calibration slice for a 10% error target) the bot answers "not sure" instead of "present" or "missing".
 
@@ -41,7 +94,7 @@ Below a confidence of 0.824 (fitted by laya on the calibration slice for a 10% e
 - The weak checks lean on "not sure": for `expected`, 7 of 15 missing cases land there rather than as a wrong "present".
 - `actual` is the bot's main blind spot: 6 of 13 reports without an actual result are confidently called complete.
 
-## Per check
+### Per check
 
 Every check, against always answering "yes" and the base model. Summary checks (what / where / when) are soft hints, not blockers.
 
@@ -110,7 +163,7 @@ Every check, against always answering "yes" and the base model. Summary checks (
 
 ## Style eval
 
-30 synthetic reports for a fictional product, written in a team's own bug template (headed sections, build line, links and tables, three long spec-like reports of 13–16k characters scanned in windows). They were written by fresh agents that never saw the training texts, and labelled by Sonnet alone, with no second teacher or adjudication. Run 2 only, scored after selection; aggregates only, since the texts carry the template.
+Original run 2 (before the retrain). 30 synthetic reports for a fictional product, written in a team's own bug template (headed sections, build line, links and tables, three long spec-like reports of 13–16k characters scanned in windows). They were written by fresh agents that never saw the training texts, and labelled by Sonnet alone, with no second teacher or adjudication. Run 2 only, scored after selection; aggregates only, since the texts carry the template.
 
 Recall of "missing" at the 0.5 cut (95% CI):
 
@@ -129,3 +182,4 @@ Recall of "missing" at the 0.5 cut (95% CI):
 - **Steps drop from 98% on eval to 62%**, and all three misses are the long spec-like reports. No report that long was in train; the model reads them in windows and calls steps present.
 - **Expected stated as a question** ("should it …?") is read as an expected result in all three cases.
 - At the 0.824 threshold the bot decides 83–100% of answers per check. The two false "missing" on blockers (one steps, one build) fall below it and become "not sure", so no present blocker part is flagged (0 of 94).
+- **Retrained run 2** (the published model) on the same 30: the same recall on every check, build precision 94% → 100%, ECE 0.06–0.16. At its 0.827 threshold one present steps part is flagged "missing" (1 of 94 present blocker parts).
