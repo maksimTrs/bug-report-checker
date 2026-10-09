@@ -64,3 +64,45 @@ def test_bot_without_decisions_has_no_accuracy():
 
     assert m["coverage"] == 0.0
     assert m["accuracy_decided"] is None
+
+
+def _gate_case(found_old, found_new, false_alarm_new=()):
+    """Ten reports, the first five missing every part; models find the given rows."""
+    from bug_report_checker.labeling import CHECKS
+
+    rows = [{"id": str(i), **{c: i >= 5 for c in CHECKS}} for i in range(10)]
+
+    def preds(found):
+        return [
+            {"id": str(i), **{c: 0.1 if i in found.get(c, ()) else 0.9 for c in CHECKS}}
+            for i in range(10)
+        ]
+
+    everywhere = dict.fromkeys(CHECKS)
+    old = preds({c: found_old for c in everywhere})
+    new = preds({c: found_new for c in everywhere} | dict(false_alarm_new))
+    return rows, old, new
+
+
+def test_gate_passes_when_actual_and_expected_improve_and_nothing_drops():
+    from bug_report_checker.evaluate import gate
+
+    assert gate(*_gate_case({0, 1}, {0, 1, 2})) == []
+
+
+def test_gate_fails_when_actual_does_not_improve():
+    from bug_report_checker.evaluate import gate
+
+    rows, old, new = _gate_case({0, 1}, {0, 1, 2})
+    for p_old, p_new in zip(old, new, strict=True):
+        p_new["actual"] = p_old["actual"]
+
+    assert any("actual" in reason for reason in gate(rows, old, new))
+
+
+def test_gate_fails_when_a_check_loses_precision():
+    from bug_report_checker.evaluate import gate
+
+    case = _gate_case({0, 1}, {0, 1, 2}, {"steps": {0, 1, 2, 5}})
+
+    assert any(reason.startswith("steps") for reason in gate(*case))

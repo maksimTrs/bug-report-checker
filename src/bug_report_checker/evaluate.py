@@ -9,6 +9,7 @@ Usage:
   python -m bug_report_checker.evaluate predict <checkpoint> <eval.jsonl> <preds.jsonl>
   python -m bug_report_checker.evaluate report <eval.jsonl> <name>=<preds.jsonl> ...
   python -m bug_report_checker.evaluate bot <eval.jsonl> <preds.jsonl> <threshold>
+  python -m bug_report_checker.evaluate gate <dev.jsonl> <old.jsonl> <new.jsonl>
 """
 
 import json
@@ -22,6 +23,10 @@ from bug_report_checker.labeling import CHECKS
 from bug_report_checker.questions import laya_questions
 
 Z95 = 1.96
+TARGETS = ("expected", "actual")  # run 3 exists to raise recall of these (D18)
+BLOCKERS = ("steps", "expected", "actual", "build_version")
+MAX_DROP = 0.05  # recall or precision of "missing", any check
+MAX_ECE_RISE = 0.03  # blockers
 
 
 def wilson(hits: int, n: int) -> tuple[float | None, float | None]:
@@ -72,6 +77,30 @@ def bot_metrics(gold: list[bool], p_true: list[float], threshold: float) -> dict
         "no_said_yes": sum(not g and y is True for g, y in pairs),
         "yes_said_no": sum(g and y is False for g, y in pairs),
     }
+
+
+def gate(rows: list[dict], old: list[dict], new: list[dict]) -> list[str]:
+    """Why `new` may not replace `old` under the rule set before training (D18).
+
+    An empty list means it may. Precision of a model that never says "missing" counts
+    as 0, so a model that stops answering "missing" cannot pass on precision.
+    """
+    old_by_id = {x["id"]: x for x in old}
+    new_by_id = {x["id"]: x for x in new}
+    reasons = []
+    for check in CHECKS:
+        gold = [r[check] for r in rows]
+        a = check_metrics(gold, [old_by_id[r["id"]][check] for r in rows])
+        b = check_metrics(gold, [new_by_id[r["id"]][check] for r in rows])
+        if check in TARGETS and not b["recall_no"] > a["recall_no"]:
+            reasons.append(f"{check}: recall missing did not rise")
+        for key in ("recall_no", "precision_no"):
+            drop = (a[key] or 0.0) - (b[key] or 0.0)
+            if drop > MAX_DROP:
+                reasons.append(f"{check}: {key} fell by {100 * drop:.1f} points")
+        if check in BLOCKERS and b["ece"] - a["ece"] > MAX_ECE_RISE:
+            reasons.append(f"{check}: ECE rose by {b['ece'] - a['ece']:.3f}")
+    return reasons
 
 
 def predict(checkpoint: str, rows: list[dict]) -> list[dict]:
@@ -160,6 +189,10 @@ def main(argv: list[str]) -> None:
         print(report(_read(argv[1]), {k: _read(v) for k, v in named.items()}))
     elif argv[0] == "bot":
         print(bot_report(_read(argv[1]), _read(argv[2]), float(argv[3])))
+    elif argv[0] == "gate":
+        reasons = gate(_read(argv[1]), _read(argv[2]), _read(argv[3]))
+        print("\n".join(reasons) or "pass")
+        raise SystemExit(1 if reasons else 0)
     else:
         raise SystemExit(__doc__)
 
