@@ -30,13 +30,17 @@ jobs:
         with:
           enable-cache: true
 
-      - run: uv sync --frozen
+      - id: sync
+        run: uv sync --frozen
 
+      # Each check runs even if the one before failed: one push shows every problem.
       - name: Lint
         run: uv run --no-sync ruff check
 
       - name: Format
+        if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
         run: uv run --no-sync ruff format --check
 
       - name: Test
+        if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
         run: uv run --no-sync pytest
