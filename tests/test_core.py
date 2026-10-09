@@ -8,16 +8,13 @@ def issue(type_=BUG, state="Open"):
     return Issue(type_, state, "Crash on save", "Steps")
 
 
-@pytest.mark.parametrize("state", ["Submitted", "Open", "Opened", "In Progress"])
+@pytest.mark.parametrize("state", ["Submitted", "Open", "In Progress"])
 def test_bug_in_a_trigger_state_is_checked(state):
     assert state in TRIGGER_STATES
     assert should_check(issue(state=state))
 
 
-@pytest.mark.parametrize(
-    "state",
-    ["On-hold", "In Clarification", "Ready for Verification", "Reviewing", None],
-)
+@pytest.mark.parametrize("state", ["To be discussed", "Fixed", "Verified", None])
 def test_bug_in_another_state_or_closed_is_skipped(state):
     assert not should_check(issue(state=state))
 

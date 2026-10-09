@@ -2,9 +2,9 @@
 
 from bug_report_checker.issue import BUG, Issue
 
-# Statuses where a bug is still being filed or just taken; later ones (On-hold,
-# In Clarification, Ready for Verification, ...) are past the point of checking it.
-TRIGGER_STATES = ("Submitted", "Open", "Opened", "In Progress")
+# YouTrack's default states while a bug is filed or just taken; a team with its own
+# workflow lists its states in the config.
+TRIGGER_STATES = ("Submitted", "Open", "In Progress")
 
 
 def should_check(issue: Issue) -> bool:

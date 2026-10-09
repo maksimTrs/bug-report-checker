@@ -38,7 +38,7 @@ def test_open_issue_without_status_label_is_submitted():
 
 def test_unknown_status_label_is_not_recognised():
     # Labels outside the configured list are not statuses (decision 2026-10-09).
-    assert from_github(gh(labels=["bug", "In Clarification"])).state == "Submitted"
+    assert from_github(gh(labels=["bug", "needs info"])).state == "Submitted"
 
 
 def test_closed_issue_has_no_state():
