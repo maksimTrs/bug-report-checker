@@ -110,4 +110,22 @@ Every check, against always answering "yes" and the base model. Summary checks (
 
 ## Style eval
 
-Separate report on 30 synthetic reports written in a team's own bug template: pending.
+30 synthetic reports for a fictional product, written in a team's own bug template (headed sections, build line, links and tables, three long spec-like reports of 13–16k characters scanned in windows). They were written by fresh agents that never saw the training texts, and labelled by Sonnet alone, with no second teacher or adjudication. Run 2 only, scored after selection; aggregates only, since the texts carry the template.
+
+Recall of "missing" at the 0.5 cut (95% CI):
+
+| Check | Missing | Base Laya | Run 2 | Precision, run 2 | Accuracy, run 2 | ECE, run 2 |
+|---|---:|---:|---:|---:|---:|---:|
+| build_version | 15 | 13% | 100% (80–100) | 94% | 97% | 0.167 |
+| steps | 8 | 12% | 62% (31–86) | 83% | 87% | 0.110 |
+| expected | 3 | 0% | 0% (0–56) | — | 90% | 0.046 |
+| actual | 0 | — | — | — | 100% | 0.135 |
+| summary_what | 10 | 20% | 30% (11–60) | 100% | 77% | 0.137 |
+| summary_where | 0 | — | — | — | 100% | 0.137 |
+| summary_when | 15 | 0% | 53% (30–75) | 80% | 70% | 0.162 |
+
+- **Not tested here: `actual` and `expected`.** The set has no report without an actual result and three without an expected one, so it says nothing about the two weak checks; their accuracy above is the "always yes" share.
+- **Build version carries over to the template**: every report without a build is found, one complete report is flagged.
+- **Steps drop from 98% on eval to 62%**, and all three misses are the long spec-like reports. No report that long was in train; the model reads them in windows and calls steps present.
+- **Expected stated as a question** ("should it …?") is read as an expected result in all three cases.
+- At the 0.824 threshold the bot decides 83–100% of answers per check. The two false "missing" on blockers (one steps, one build) fall below it and become "not sure", so no present blocker part is flagged (0 of 94).
