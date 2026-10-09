@@ -16,7 +16,7 @@ def test_defaults():
     c = Config()
     assert c.bug_labels == ("bug",)
     assert c.status_labels == ("Submitted", "Open", "In Progress")
-    assert c.threshold == 0.827  # calibrated on the published model (T3.4)
+    assert c.threshold == 0.85  # calibrated on the published model (T3.4)
     assert c.comment_on_success is True
     assert c.build_version_pattern is None  # no team format in public code
     assert c.environments == ()
