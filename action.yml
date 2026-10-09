@@ -6,7 +6,7 @@ branding:
 
 inputs:
   github-token:
-    description: Token that reads the config and writes the comment (needs `issues: write`).
+    description: "Token that reads the config and writes the comment (needs `issues: write`)."
     default: ${{ github.token }}
   model:
     description: Hugging Face model id.
