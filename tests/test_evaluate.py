@@ -1,6 +1,6 @@
 import pytest
 
-from bug_report_checker.evaluate import check_metrics, wilson
+from bug_report_checker.evaluate import bot_metrics, check_metrics, wilson
 
 
 def test_wilson_interval_contains_the_share():
@@ -44,3 +44,23 @@ def test_confidence_is_of_the_chosen_answer():
     m = check_metrics([True, False], [0.9, 0.2])
 
     assert m["mean_confidence"] == pytest.approx(0.85)
+
+
+def test_bot_says_not_sure_below_the_threshold():
+    # gold: missing, missing, present, present
+    gold = [False, False, True, True]
+    p_true = [0.05, 0.4, 0.95, 0.2]  # confidence 0.95, 0.6, 0.95, 0.8
+
+    m = bot_metrics(gold, p_true, threshold=0.75)
+
+    assert m["coverage"] == pytest.approx(0.75)  # 0.6 is "not sure"
+    assert m["accuracy_decided"] == pytest.approx(2 / 3)
+    assert (m["no_said_no"], m["no_unsure"], m["no_said_yes"]) == (1, 1, 0)
+    assert m["yes_said_no"] == 1
+
+
+def test_bot_without_decisions_has_no_accuracy():
+    m = bot_metrics([True], [0.6], threshold=0.9)
+
+    assert m["coverage"] == 0.0
+    assert m["accuracy_decided"] is None

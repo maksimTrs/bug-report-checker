@@ -8,6 +8,7 @@ interval.
 Usage:
   python -m bug_report_checker.evaluate predict <checkpoint> <eval.jsonl> <preds.jsonl>
   python -m bug_report_checker.evaluate report <eval.jsonl> <name>=<preds.jsonl> ...
+  python -m bug_report_checker.evaluate bot <eval.jsonl> <preds.jsonl> <threshold>
 """
 
 import json
@@ -52,6 +53,24 @@ def check_metrics(gold: list[bool], p_true: list[float]) -> dict:
         "precision_no": found / said_no if said_no else None,
         "mean_confidence": sum(conf) / len(conf),
         "ece": ece(conf, correct),
+    }
+
+
+def bot_metrics(gold: list[bool], p_true: list[float], threshold: float) -> dict:
+    """The bot's view: below `threshold` confidence it says "not sure" instead."""
+    decided = [max(p, 1 - p) >= threshold for p in p_true]
+    said = [None if not d else p >= 0.5 for d, p in zip(decided, p_true, strict=True)]
+    right = [y == g for g, y in zip(gold, said, strict=True) if y is not None]
+    pairs = list(zip(gold, said, strict=True))
+    return {
+        "n": len(gold),
+        "coverage": len(right) / len(gold),
+        "accuracy_decided": sum(right) / len(right) if right else None,
+        "no_n": sum(not g for g in gold),
+        "no_said_no": sum(not g and y is False for g, y in pairs),
+        "no_unsure": sum(not g and y is None for g, y in pairs),
+        "no_said_yes": sum(not g and y is True for g, y in pairs),
+        "yes_said_no": sum(g and y is False for g, y in pairs),
     }
 
 
@@ -106,6 +125,27 @@ def report(rows: list[dict], preds: dict[str, list[dict]]) -> str:
     return "\n".join(lines)
 
 
+def bot_report(rows: list[dict], preds: list[dict], threshold: float) -> str:
+    """Markdown: what the bot would say per check at the calibrated threshold."""
+    by_id = {x["id"]: x for x in preds}
+    lines = [
+        f'Threshold {threshold}: below it the bot says "not sure".',
+        "",
+        "| Check | Coverage | Accuracy decided | Missing → missing / not sure /"
+        " present | Present → missing |",
+        "|---|---|---|---|---|",
+    ]
+    for check in CHECKS:
+        gold = [r[check] for r in rows]
+        m = bot_metrics(gold, [by_id[r["id"]][check] for r in rows], threshold)
+        lines.append(
+            f"| {check} | {_pct(m['coverage'])} | {_pct(m['accuracy_decided'])} |"
+            f" {m['no_said_no']} / {m['no_unsure']} / {m['no_said_yes']}"
+            f" of {m['no_n']} | {m['yes_said_no']} of {m['n'] - m['no_n']} |"
+        )
+    return "\n".join(lines)
+
+
 def _read(path: str) -> list[dict]:
     return [json.loads(line) for line in Path(path).read_text("utf-8").splitlines()]
 
@@ -118,6 +158,8 @@ def main(argv: list[str]) -> None:
     elif argv[0] == "report":
         named = dict(arg.split("=", 1) for arg in argv[2:])
         print(report(_read(argv[1]), {k: _read(v) for k, v in named.items()}))
+    elif argv[0] == "bot":
+        print(bot_report(_read(argv[1]), _read(argv[2]), float(argv[3])))
     else:
         raise SystemExit(__doc__)
 
