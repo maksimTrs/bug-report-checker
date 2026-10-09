@@ -40,7 +40,14 @@ def run(
     event: dict, repo: str, client: httpx.Client, load_agent: Callable[[], object]
 ) -> str:
     """What happened: "not checked" or a `publish` outcome. The model is loaded
-    only when a check needs it."""
+    only when a check needs it.
+
+    An event without an issue (push, schedule, workflow_dispatch) only downloads the
+    model: `issues` runs get a read-only Actions cache, so a trusted event fills it.
+    """
+    if "issue" not in event:
+        load_agent()
+        return "model cached"
     config = read_config(client, repo)
     issue = from_github(
         event["issue"],

@@ -94,6 +94,17 @@ def test_long_report_keeps_a_build_found_by_code():
     assert d.verdicts["build_version"] == PRESENT
 
 
+def test_empty_template_sections_are_missing_whatever_the_model_says():
+    # Seen live: the model read a bare "Steps to reproduce" heading as steps.
+    description = (
+        "### Steps to reproduce\n\n### Actual result\n\nBlank page\n\n"
+        "### Expected result\n\nTBD"
+    )
+    d = decide(FakeAgent(0.99), state(description), CONFIG)
+    assert (d.verdicts["steps"], d.verdicts["expected"]) == (MISSING, MISSING)
+    assert d.verdicts["actual"] == PRESENT
+
+
 def test_environment_and_image_only_come_from_code():
     description = "Seen on qa1 and prod\n**Actual result:**\n[image]"
     d = decide(FakeAgent(), state(description), Config(environments=("qa1",)))

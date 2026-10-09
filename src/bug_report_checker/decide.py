@@ -7,7 +7,12 @@ from dataclasses import dataclass
 
 from bug_report_checker.config import Config
 from bug_report_checker.questions import laya_questions
-from bug_report_checker.rules import build_version, environment, image_only
+from bug_report_checker.rules import (
+    build_version,
+    empty_sections,
+    environment,
+    image_only,
+)
 
 PRESENT = "present"
 MISSING = "missing"
@@ -47,6 +52,8 @@ def decide(agent, state: dict[str, str], config: Config) -> Decision:
                 verdicts[check] = UNSURE
     if not state["description"]:
         verdicts["steps"] = MISSING  # the summary is never the steps (rubric)
+    for check in empty_sections(state):
+        verdicts[check] = MISSING  # a bare template heading is not the content
     build = build_version(state, config.build_version_pattern)
     if build is not None:
         verdicts["build_version"] = PRESENT if build else MISSING

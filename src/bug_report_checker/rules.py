@@ -55,32 +55,63 @@ def environment(state: dict[str, str], stands: tuple[str, ...]) -> list[str]:
     return found + ["prod"] if _PROD.search(text) else found
 
 
-# `### Actual result`, `**Expected result:**`, `**Actual**:`, `Actual results:`.
-_RESULT_HEAD = re.compile(
-    r"^[ \t]*(#{1,6}[ \t]*)?(\*\*)?[ \t]*(actual|expected)"
-    r"(?:[ \t]+(?:results?|behaviou?r))?[ \t]*(:)?[ \t]*(\*\*)?[ \t]*(:)?(.*)$",
+# `### Actual result`, `**Expected result:**`, `**Actual**:`, `Steps to reproduce:`.
+_SECTION_HEAD = re.compile(
+    r"^[ \t]*(#{1,6}[ \t]*)?(\*\*)?[ \t]*(actual|expected|steps)"
+    r"(?:[ \t]+(?:results?|behaviou?r|to[ \t]+reproduce))?"
+    r"[ \t]*(:)?[ \t]*(\*\*)?[ \t]*(:)?(.*)$",
     re.IGNORECASE,
 )
-# Any field heading ends a section: markdown, bold, or `Label:` at a line start.
-_ANY_HEAD = re.compile(r"^[ \t]*(?:#{1,6}[ \t]|\*\*[^*\n]+\*\*|[A-Z][\w ()/'-]{0,40}:)")
+# Any field heading ends a section: markdown (not a `# code` list item), bold, or a
+# short `Label:` alone on its line; `UPD: the fix…` or a sentence ending in a colon
+# is text.
+_ANY_HEAD = re.compile(
+    r"^[ \t]*(?:#{1,6}[ \t]+[^`\s]|\*\*[^*\n]+\*\*"
+    r"|[A-Z][\w()/'-]*(?:[ \t]+[\w()/'-]+){0,3}[ \t]*:[ \t]*$)"
+)
 _ONLY_MEDIA = re.compile(r"(?:\s|[-*]|\d+\.|\[image\])*")
+# Left as the template had it: blank, `1.` `2.`, `-`, TBD, N/A.
+_BLANK = re.compile(r"(?:\s|[-*.]|\d+\.|tbd|n/?a)*", re.IGNORECASE)
+
+
+def _sections(description: str) -> list[tuple[str, str]]:
+    """(field, content) for each Steps / Actual / Expected heading."""
+    lines = description.split("\n")
+    heads = [_section_head(line) for line in lines]
+    found = []
+    for i, m in enumerate(heads):
+        if not m:
+            continue
+        body = [m[7]]
+        for nxt, nxt_head in zip(lines[i + 1 :], heads[i + 1 :], strict=True):
+            if nxt_head or _ANY_HEAD.match(nxt):
+                break
+            body.append(nxt)
+        found.append((m[3].lower(), "\n".join(body)))
+    return found
+
+
+def _section_head(line: str) -> re.Match | None:
+    """A heading needs a heading form: `#`, bold or a colon, not just the word."""
+    m = _SECTION_HEAD.match(line)
+    return m if m and (m[1] or (m[2] and m[5]) or m[4] or m[6]) else None
 
 
 def image_only(state: dict[str, str]) -> list[str]:
     """Actual / Expected sections holding only `[image]`: a hint to describe the
     result in text too. Needs headings, so free-form reports never get it."""
-    lines = state["description"].split("\n")
-    found = set()
-    for i, line in enumerate(lines):
-        m = _RESULT_HEAD.match(line)
-        if not m or not (m[1] or (m[2] and m[5]) or m[4] or m[6]):
-            continue
-        body = [m[7]]
-        for nxt in lines[i + 1 :]:
-            if _ANY_HEAD.match(nxt):
-                break
-            body.append(nxt)
-        content = "\n".join(body)
-        if "[image]" in content and _ONLY_MEDIA.fullmatch(content):
-            found.add(m[3].lower())
+    found = {
+        field
+        for field, content in _sections(state["description"])
+        if field != "steps" and "[image]" in content and _ONLY_MEDIA.fullmatch(content)
+    }
     return [f for f in ("actual", "expected") if f in found]
+
+
+def empty_sections(state: dict[str, str]) -> list[str]:
+    """Steps / Expected headings left empty: "missing" by the rubric, whatever the
+    model reads into the heading. Actual is left out: the summary may state it."""
+    sections = _sections(state["description"])
+    filled = {f for f, content in sections if not _BLANK.fullmatch(content)}
+    empty = {f for f, content in sections if _BLANK.fullmatch(content)}
+    return [f for f in ("steps", "expected") if f in empty - filled]

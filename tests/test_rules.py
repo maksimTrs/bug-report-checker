@@ -1,7 +1,12 @@
 import pytest
 
 from bug_report_checker.preprocess import preprocess
-from bug_report_checker.rules import build_version, environment, image_only
+from bug_report_checker.rules import (
+    build_version,
+    empty_sections,
+    environment,
+    image_only,
+)
 
 # An invented build format: a team's real one lives only in its own config.
 PATTERN = r"\bR\d{2}\.\d{2}-(?:\d+|dev|hf-\w+)\b"
@@ -147,3 +152,42 @@ def test_image_only_sections(description, fields):
 )
 def test_no_image_only_hint(description):
     assert image_only(state(description)) == []
+
+
+@pytest.mark.parametrize(
+    ("description", "fields"),
+    [
+        (
+            "### Build version\n\n### Steps to reproduce\n\n### Actual result\n\n"
+            "Blank page\n\n### Expected result\n\nA5 pages",
+            ["steps"],
+        ),
+        (
+            "**Steps to reproduce:**\n1.\n2.\n**Expected result:** TBD",
+            ["steps", "expected"],
+        ),
+        ("**Steps to reproduce:**\n1. Open\n**Expected result:**\n-\n", ["expected"]),
+        ("Steps:\n\nExpected result:\nN/A", ["steps", "expected"]),
+    ],
+)
+def test_empty_steps_and_expected_sections(description, fields):
+    assert empty_sections(state(description)) == fields
+
+
+@pytest.mark.parametrize(
+    "description",
+    [
+        "**Actual result:**\n**Expected result:** Saved",  # the summary may say actual
+        "**Expected result:** ![a](a.png)",  # a screenshot is not empty
+        "Steps are unknown, it just crashes",  # free form: the model decides
+        "**Steps to reproduce:**\n**Steps to reproduce:**\n1. Open",  # filled once
+        # Lines that look like headings but are text (found in train / eval):
+        "**Expected result:**\n UPD: import fails with a clear error",
+        "### Expected Results\nThere are two possible results:\n1. Block it",
+        "Steps to reproduce:\n\n# `java Server -p 1234`\n# `ssh -p 1234 localhost`",
+        "### Steps to Reproduce\n\nMongoDB Enterprise shard-0:PRIMARY> db.version()",
+        "",
+    ],
+)
+def test_no_empty_sections(description):
+    assert empty_sections(state(description)) == []

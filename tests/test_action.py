@@ -84,6 +84,13 @@ def test_team_config_is_read_from_the_repository():
     assert run_with(server, event(labels=["bug", "Triaged"]), loads) == "created"
 
 
+def test_event_without_an_issue_only_caches_the_model():
+    # push / schedule / workflow_dispatch may write the cache; issues events may not.
+    server, loads = FakeGitHub(), []
+    assert run_with(server, {"ref": "refs/heads/main"}, loads) == "model cached"
+    assert (loads, server.posted) == ([1], [])
+
+
 def test_bad_config_fails_before_the_model():
     server, loads = FakeGitHub("treshold: 0.9"), []
     with pytest.raises(ConfigError, match="treshold"):
