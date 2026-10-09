@@ -44,3 +44,85 @@ jobs:
       - name: Test
         if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
         run: uv run --no-sync pytest
+
+  # The bot on the frozen eval set against eval/baseline (src/bug_report_checker/eval_gate.py).
+  eval:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash # pipefail, for the `| tee` below
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: .python-version
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+
+      - run: uv sync --frozen --no-default-groups
+
+      - name: Run the model
+        run: |
+          mkdir -p eval-out
+          uv run --no-sync python -m bug_report_checker.eval_gate predict \
+            eval/eval_v2.jsonl eval-out/predictions.jsonl
+        env:
+          HF_HOME: ${{ runner.temp }}/hf-cache
+          HF_HUB_DISABLE_TELEMETRY: "1"
+
+      - name: Bot gate
+        run: |
+          uv run --no-sync python -m bug_report_checker.eval_gate gate \
+            eval/eval_v2.jsonl eval-out/predictions.jsonl eval/baseline eval-out
+
+      # 280 answers: one changed answer moves accuracy by 0.0036.
+      - name: Model gate
+        id: model
+        if: ${{ !cancelled() && hashFiles('eval-out/report.json') != '' }}
+        run: |
+          uv run --no-sync laya-evals compare eval-out/report.json \
+            --baseline eval/baseline/model.json \
+            --tolerance noul_accuracy=0.01 \
+            --tolerance selective_accuracy@50=0.02 \
+            --tolerance selective_accuracy@80=0.02 \
+            --tolerance mean_confidence=0.005 \
+            --tolerance ece=0.01 \
+            --tolerance brier=0.005 \
+            --tolerance aurc=0.01 \
+            | tee eval-out/model-compare.txt
+
+      - name: Summary
+        if: ${{ !cancelled() }}
+        run: |
+          if [ -f eval-out/summary.md ]; then
+            cat eval-out/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f eval-out/model-compare.txt ]; then
+            {
+              echo "## Raw model: laya-evals compare"
+              echo '```'
+              cat eval-out/model-compare.txt
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ "$MODEL_GATE" = failure ]; then
+            # laya-evals compare is two-sided: a better model fails too.
+            echo 'Model drift beyond the tolerance, either way. Intended? Refresh' \
+              '`eval/baseline/` with `eval_gate gate ... --update`.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+        env:
+          MODEL_GATE: ${{ steps.model.outcome }}
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: eval-report
+          path: eval-out/
+          retention-days: 14
+          if-no-files-found: ignore
