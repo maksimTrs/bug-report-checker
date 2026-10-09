@@ -7,10 +7,11 @@ outside `status_labels` are not statuses, so they do not change that.
 
 import re
 
+from bug_report_checker.core import TRIGGER_STATES
 from bug_report_checker.issue import BUG, OTHER, Issue
 
 BUG_LABELS = ("bug",)
-STATUS_LABELS = ("Submitted", "Open", "Opened", "In Progress")
+STATUS_LABELS = TRIGGER_STATES  # GitHub has only the statuses we check on
 NEW = "Submitted"
 # Issue forms write a skipped optional field as this line under the field heading.
 _NO_RESPONSE = re.compile(r"^_No response_[ \t]*$", re.M)
