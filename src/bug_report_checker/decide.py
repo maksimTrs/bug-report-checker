@@ -12,6 +12,7 @@ from bug_report_checker.rules import (
     empty_sections,
     environment,
     image_only,
+    strict_missing,
 )
 
 PRESENT = "present"
@@ -26,6 +27,7 @@ class Decision:
     long: bool  # read in several windows: the answers are less reliable
     environments: list[str]
     image_only: list[str]  # result fields shown only as a screenshot
+    strict: bool  # checked by the strict criteria (config `strict`, D26)
 
 
 def _verdict(p_true: float, threshold: float) -> str:
@@ -54,6 +56,9 @@ def decide(agent, state: dict[str, str], config: Config) -> Decision:
         verdicts["steps"] = MISSING  # the summary is never the steps (rubric)
     for check in empty_sections(state):
         verdicts[check] = MISSING  # a bare template heading is not the content
+    if config.strict:  # rules only lower a verdict, never raise it (D27)
+        for check in strict_missing(state):
+            verdicts[check] = MISSING
     build = build_version(state, config.build_version_pattern)
     if build is not None:
         verdicts["build_version"] = PRESENT if build else MISSING
@@ -62,4 +67,5 @@ def decide(agent, state: dict[str, str], config: Config) -> Decision:
         long=long,
         environments=environment(state, config.environments),
         image_only=image_only(state),
+        strict=config.strict,
     )

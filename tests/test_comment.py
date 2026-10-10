@@ -9,6 +9,7 @@ def decision(long=False, environments=(), image_only=(), **verdicts):
         long=long,
         environments=list(environments),
         image_only=list(image_only),
+        strict=False,
     )
 
 
@@ -84,3 +85,16 @@ def test_long_report_and_environment_are_noted():
         "<sub>Checked in status **In Progress** by bug-report-checker."
         " Environment: staging, prod.</sub>"
     )
+
+
+def test_strict_mode_says_what_counts():
+    d = Decision(
+        verdicts={c: MISSING if c == "actual" else PRESENT for c in QUESTIONS},
+        long=False,
+        environments=[],
+        image_only=[],
+        strict=True,
+    )
+    text = render(d, "Submitted")
+    assert "error text, the wrong value, a log or a screenshot" in text
+    assert "describe what happened instead" not in text

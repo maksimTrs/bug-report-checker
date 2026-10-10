@@ -109,3 +109,37 @@ def test_environment_and_image_only_come_from_code():
     description = "Seen on qa1 and prod\n**Actual result:**\n[image]"
     d = decide(FakeAgent(), state(description), Config(environments=("qa1",)))
     assert (d.environments, d.image_only) == (["qa1", "prod"], ["actual"])
+
+
+SANDBOX_8 = state(
+    "When I try to export pdf, I can see red errors on UI page",
+    "Invoice PDF export fails from time to time",
+)
+STRICT = Config(threshold=0.8, strict=True)
+
+
+def test_strict_off_by_default_keeps_the_model_verdicts():
+    d = decide(FakeAgent(0.95), SANDBOX_8, CONFIG)
+    assert d.verdicts["expected"] == d.verdicts["actual"] == PRESENT
+    assert d.strict is False
+
+
+def test_strict_lowers_what_the_description_does_not_state():
+    d = decide(FakeAgent(0.95), SANDBOX_8, STRICT)
+    assert [d.verdicts[c] for c in ("steps", "expected", "actual")] == [MISSING] * 3
+    assert d.strict is True
+
+
+def test_strict_lowers_unsure_too():
+    d = decide(FakeAgent(0.5), SANDBOX_8, STRICT)
+    assert d.verdicts["actual"] == MISSING
+
+
+def test_strict_never_raises_a_missing_verdict():
+    complete = state(
+        "1. Open Invoices\n2. Click Export PDF\n\n"
+        'Expected: the PDF downloads.\n\nActual: "Export failed: timeout".'
+    )
+    d = decide(FakeAgent(0.95, steps=0.05), complete, STRICT)
+    assert d.verdicts["steps"] == MISSING
+    assert d.verdicts["expected"] == d.verdicts["actual"] == PRESENT

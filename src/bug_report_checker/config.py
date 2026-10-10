@@ -31,6 +31,7 @@ class Config:
     comment_on_success: bool = True
     build_version_pattern: str | None = None  # the team's build format, if any
     environments: tuple[str, ...] = ()  # names of test stands, such as "staging"
+    strict: bool = False  # the description must state steps / expected / actual (D26)
 
 
 def _labels(key: str, value: object) -> tuple[str, ...]:
@@ -76,6 +77,7 @@ _PARSERS = {
     "comment_on_success": _flag,
     "build_version_pattern": _pattern,
     "environments": _labels,
+    "strict": _flag,
 }
 
 

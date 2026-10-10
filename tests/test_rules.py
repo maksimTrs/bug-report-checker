@@ -6,6 +6,7 @@ from bug_report_checker.rules import (
     empty_sections,
     environment,
     image_only,
+    strict_missing,
 )
 
 # An invented build format: a team's real one lives only in its own config.
@@ -191,3 +192,117 @@ def test_empty_steps_and_expected_sections(description, fields):
 )
 def test_no_empty_sections(description):
     assert empty_sections(state(description)) == []
+
+
+# Strict mode (D26, D27): the description alone must state each part.
+SANDBOX_8 = "When I try to export pdf, I can see red errors on UI page"
+
+
+@pytest.mark.parametrize(
+    "description",
+    [
+        "1. Open Shipments\n2. Click Export",
+        "**Steps to reproduce:**\nOpen Shipments and click Export.",
+        "```\n$ parcelwise export --format pdf\n```",
+        "SELECT DATE_ADD('2018-02-01', INTERVAL -188 DAY)",
+        "$ python setup.py develop",
+        'Assert.assertEquals(false, StringUtils.equals("in", "notin"));',
+        "Settings -> Notifications -> SMS alerts",
+    ],
+)
+def test_strict_steps_present(description):
+    assert "steps" not in strict_missing(state(description))
+
+
+@pytest.mark.parametrize(
+    "description",
+    [
+        SANDBOX_8,
+        "Clicking Export on the Shipments page downloads an empty CSV file (0 bytes).",
+        "",
+    ],
+)
+def test_strict_steps_missing(description):
+    assert "steps" in strict_missing(state(description))
+
+
+@pytest.mark.parametrize(
+    "description",
+    [
+        "Actual: the map is blank.\n\nExpected: the map loads.",
+        "The export should keep the column order.",
+        "The refund shows 0.00 instead of 24.90.",
+        "There needs to be a lock on the Create button.",
+        "```\njava.lang.AssertionError: expected:<1> but was:<2>\n```",
+        "Expected result: it should not fail.",
+        "### Fix Proposal\nCall toString() on every property value.",
+    ],
+)
+def test_strict_expected_present(description):
+    assert "expected" not in strict_missing(state(description))
+
+
+@pytest.mark.parametrize(
+    "description",
+    [
+        SANDBOX_8,
+        "After a reload the SMS toggle is on again.",
+        "The list shows parcels from 2019 first. Shouldn't the newest be on top?",
+        "### Build version\n\nlatest\n\n### Expected result\n\n",
+        "```\nerror: expected ';' before '}'\n```",
+    ],
+)
+def test_strict_expected_missing(description):
+    assert "expected" in strict_missing(state(description))
+
+
+@pytest.mark.parametrize(
+    "description",
+    [
+        "Steps:\n1. Open a shipment\n\n[image]",
+        'Printing fails with "Printer queue unavailable".',
+        '```\nTraceback (most recent call last):\n  File "x.py", line 1\n```',
+        "Saving throws a NullPointerException.",
+        "The rate endpoint returns null for EU parcels.",
+        "Export downloads an empty CSV file (0 bytes).",
+        "The Host header is always missing the port.",
+    ],
+)
+def test_strict_actual_present(description):
+    assert "actual" not in strict_missing(state(description))
+
+
+@pytest.mark.parametrize(
+    "description",
+    [
+        SANDBOX_8,
+        "It doesn't work.",
+        pytest.param(
+            "1. Open a shipment\n2. Click Print label\n\nExpected: the label prints.",
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason="known limit (T5.7): list lines outside a Steps heading read"
+                " as result text; the symptom is only in the summary",
+            ),
+        ),
+        "Steps:\n1. Log in\n2. Open Route planner\n\nActual: the page is broken.",
+        "",
+    ],
+)
+def test_strict_actual_missing(description):
+    assert "actual" in strict_missing(state(description))
+
+
+def test_strict_empty_issue_form_misses_all_three():
+    # Sandbox #7 "Doesn't work" after the adapter drops `_No response_`.
+    form = (
+        "### Build version\n\nlatest\n\n### Steps to reproduce\n\n\n\n"
+        "### Actual result\n\n\n\n### Expected result\n\n"
+    )
+    missing = strict_missing(state(form, "Doesn't work"))
+    assert missing == ["steps", "expected", "actual"]
+
+
+def test_strict_reads_the_description_not_the_summary():
+    d = state("", summary="Export fails with 'Printer queue unavailable', should print")
+    assert strict_missing(d) == ["steps", "expected", "actual"]

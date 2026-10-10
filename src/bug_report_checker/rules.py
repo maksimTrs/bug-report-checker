@@ -115,3 +115,155 @@ def empty_sections(state: dict[str, str]) -> list[str]:
     filled = {f for f, content in sections if not _BLANK.fullmatch(content)}
     empty = {f for f, content in sections if _BLANK.fullmatch(content)}
     return [f for f in ("steps", "expected") if f in empty - filled]
+
+
+# Strict mode (D26, D27): the description itself must state each part. Measured on
+# the strict gold `eval/strict_gold.jsonl`; the boundaries are Max's (T5.7).
+_CODE_BLOCK = re.compile(r"```.*?(?:```|\Z)", re.S)
+_LIST_ITEM = re.compile(r"^\s*(?:\d+[.)]|[-*•])\s+\S", re.M)
+# One runnable command, query, call or snippet is a repro, fenced or not.
+_COMMAND = re.compile(
+    r"^[ \t]*(?:SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|CALL)[ \t]+\S"
+    r"|^[ \t]*(?:\$|C:\\[^>\n]*>)[ \t]*\S"
+    r"|^[ \t]*[\w$.]+\([^\n]*\)[ \t]*;?[ \t]*$"
+    r"|^[^\n]*\{[ \t]*$(?:\n[^\n]*){1,30}?\n[ \t]*\}"
+    r"|`[^`\n]*[ (][^`\n]*`",
+    re.M,
+)
+_MENU_PATH = re.compile(r"\S+\s*(?:->|>>|>|→)\s*\S+\s*(?:->|>>|>|→)\s*\S+")
+
+_EXPECT_WORDS = re.compile(
+    r"\b(?:should(?:n'?t)?|expected|expect(?:s|ing)?|must|instead\s+of"
+    r"|supposed\s+to|ought\s+to|needs?\s+to|suggest\w*|propos\w+)\b",
+    re.I,
+)
+# A test assertion states the expected value: `expected:<1> but was:<2>`.
+_ASSERT = re.compile(r"\bexpected:?\s*<|\bexpected:?\s*\S+\s+but\s+(?:was|got)\b", re.I)
+_PROPOSAL_HEAD = re.compile(
+    r"^[ \t]*(?:#{1,6}[ \t]*|\*\*|h\d\.[ \t]*)?(?:fix[ \t]+proposals?|suggestions?"
+    r"|proposed[ \t]+(?:solution|fix)|expected[ \t]+results?)\b[^\n]*$",
+    re.I | re.M,
+)
+_SENTENCE = re.compile(r"(?<=[.!?])\s+|\n")
+
+# What makes an actual result concrete without reading it: a screenshot, a log or a
+# trace, an error name or status, quoted text, a wrong value, a crash or a hang.
+_CONCRETE = [
+    re.compile(
+        r"^\s*at\s+[\w$.<>]+\(|Traceback \(most recent|^\s*File \".+\", line \d+"
+        r"|\b\w+(?:Exception|Error)\b(?::|\s+at\b)|^\s*Caused by:",
+        re.M,
+    ),
+    re.compile(r"\b[A-Z]\w*(?:Exception|Error)\b|\bNPE\b|\bsegfault\b", re.I),
+    re.compile(
+        r"\b(?:HTTP\s*)?[45]\d\d\b(?=\s*(?:error|status|response|code|\(|$))"
+        r"|\b[45]\d\d\s+(?:Not Found|Internal|Bad|Forbidden|Unauthorized)",
+        re.I,
+    ),
+    # An apostrophe in "doesn't … doesn't" is not a quote.
+    re.compile(r"\"[^\"\n]{4,}\"|(?<![A-Za-z])'[^'\n]{8,}'|“[^”\n]{4,}”|`[^`\n]+`"),
+    re.compile(
+        r"\binstead\s+of\b|\b(?:returns?|returned|shows?|showed|shown|displays?"
+        r"|displayed|gives?|gave|prints?|printed|outputs?)\s+(?:an?\s+|the\s+)?"
+        r"(?:null|empty|blank|nothing|zero|0|-?\d[\d.,]*|true|false|undefined|NaN"
+        r"|wrong|incorrect)"
+        r"|\bis\s+(?:null|empty|blank|undefined|missing"
+        r"|not\s+(?:shown|displayed|saved|updated))\b",
+        re.I,
+    ),
+    re.compile(
+        r"\b(?:crash(?:es|ed|ing)?|hang(?:s|ing)?|hung|freez(?:es|ing)|froze(?:n)?"
+        r"|deadlock|infinite\s+loop|blank\s+(?:page|screen)|white\s+screen"
+        r"|out\s+of\s+memory|OOM)\b",
+        re.I,
+    ),
+]
+# Without a marker, a result in these words is not concrete (Max: "red errors on UI
+# page", "doesn't work"); a prose symptom without them is ("the header lacks the port").
+_VAGUE_RESULT = re.compile(
+    r"\b(?:does\s*n[o']?t|do\s*n[o']?t|wo\s*n't|will\s+not|is\s*n't|is\s+not)\s+work"
+    r"|\bnot\s+working\b|\bbroken\b|\bfail(?:s|ed|ing|ure)?\b|\berrors?\b"
+    r"|\bproblems?\b|\bissues?\b|\bwrong\b|\bincorrect(?:ly)?\b|\bnothing\s+happens\b",
+    re.I,
+)
+_WORD = re.compile(r"[A-Za-z]{2,}")
+
+
+def _prose(description: str) -> str:
+    """Without code blocks: an `expected ';'` in a log is not a claim."""
+    return _CODE_BLOCK.sub(" ", description)
+
+
+def _strict_steps(description: str) -> bool:
+    """A list of 2+ items, a filled Steps section, code, a command or a menu path.
+    A walk-through in prose does not count: no verb list tells actions apart."""
+    prose = _prose(description)
+    return bool(
+        _CODE_BLOCK.search(description)
+        or _COMMAND.search(description)
+        or any(
+            f == "steps" and not _BLANK.fullmatch(c) for f, c in _sections(description)
+        )
+        or len(_LIST_ITEM.findall(prose)) >= 2
+        or _MENU_PATH.search(prose)
+    )
+
+
+def _strict_expected(description: str) -> bool:
+    """Stated, not implied: a section, a "should"-word or an assertion. A heading
+    names a field and a question asks, so neither states anything."""
+    if any(
+        f == "expected" and not _BLANK.fullmatch(c) for f, c in _sections(description)
+    ):
+        return True
+    for m in _PROPOSAL_HEAD.finditer(description):
+        rest = description[m.end() :].strip()
+        if rest and not _BLANK.fullmatch(rest.split("\n", 1)[0]):
+            return True
+    if _ASSERT.search(description):
+        return True
+    lines = [ln for ln in _prose(description).split("\n") if not _section_head(ln)]
+    sentences = _SENTENCE.split("\n".join(lines))
+    return any(
+        _EXPECT_WORDS.search(s) for s in sentences if not s.rstrip().endswith("?")
+    )
+
+
+def _result_text(description: str) -> str:
+    """Prose outside the Steps / Expected sections: where a result could be."""
+    keep, skip = [], False
+    for line in _prose(description).split("\n"):
+        head = _section_head(line)
+        if head:
+            skip = head[3].lower() in ("steps", "expected")
+            if not skip:
+                keep.append(head[7])
+        elif _ANY_HEAD.match(line):
+            skip = False
+        elif not skip:
+            keep.append(line)
+    return "\n".join(keep)
+
+
+def _strict_actual(description: str) -> bool:
+    """Missing only when nothing concrete is found and the result is absent or
+    vague: "concrete" is semantic, so the rule stays narrow (D26 measurement)."""
+    if "[image]" in description or _CODE_BLOCK.search(description):
+        return True
+    prose = _prose(description)
+    if any(p.search(prose) for p in _CONCRETE):
+        return True
+    text = _result_text(description)
+    return len(_WORD.findall(text)) >= 3 and not _VAGUE_RESULT.search(text)
+
+
+def strict_missing(state: dict[str, str]) -> list[str]:
+    """Steps / expected / actual the description does not state by the strict
+    criteria, whatever the summary says."""
+    d = state["description"]
+    checks = {
+        "steps": _strict_steps,
+        "expected": _strict_expected,
+        "actual": _strict_actual,
+    }
+    return [c for c, stated in checks.items() if not stated(d)]

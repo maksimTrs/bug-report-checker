@@ -20,6 +20,7 @@ def test_defaults():
     assert c.comment_on_success is True
     assert c.build_version_pattern is None  # no team format in public code
     assert c.environments == ()
+    assert c.strict is False  # the eval gate and other repositories stay lenient
 
 
 def test_full_config_from_file(tmp_path):
@@ -30,7 +31,8 @@ def test_full_config_from_file(tmp_path):
         "threshold: 0.85\n"
         "comment_on_success: false\n"
         "build_version_pattern: 'v\\d+\\.\\d+'\n"
-        "environments: [staging, qa1]\n",
+        "environments: [staging, qa1]\n"
+        "strict: true\n",
         encoding="utf-8",
     )
     assert load_config(path) == Config(
@@ -40,6 +42,7 @@ def test_full_config_from_file(tmp_path):
         comment_on_success=False,
         build_version_pattern=r"v\d+\.\d+",
         environments=("staging", "qa1"),
+        strict=True,
     )
 
 
@@ -58,6 +61,7 @@ def test_partial_config_keeps_other_defaults():
         # The model's confidence tops out at ~0.86: above it the bot goes silent.
         ("threshold: 0.9", "tops out at about 0.86"),
         ("comment_on_success: 'no'", "'comment_on_success' must be true or false"),
+        ("strict: 1", "'strict' must be true or false"),
         ("bug_labels: bug", "'bug_labels' must be a list of non-empty strings"),
         ("environments: [dev1, '']", "'environments' must be a list of non-empty"),
         ("status_labels: []", "'status_labels' must list at least one status"),

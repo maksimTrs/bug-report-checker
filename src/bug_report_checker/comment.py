@@ -21,6 +21,15 @@ HOW_TO_FIX = {
     "build_version": "name the exact build where you saw the bug,"
     " not latest or the current prod.",
 }
+# Strict mode asks for what the description itself must state (D26).
+STRICT_HOW_TO_FIX = {
+    "steps": "list at least two steps, or give a command or snippet that"
+    " reproduces it.",
+    "expected": "state in the description what should have happened: an Expected"
+    " section or a sentence with should. The title does not count.",
+    "actual": "describe in the description what happened instead: the error text,"
+    ' the wrong value, a log or a screenshot. "Doesn\'t work" is not enough.',
+}
 HINTS = {
     "summary_what": "Say in the title what is wrong, not what to do.",
     "summary_where": "Name in the title where it happens: a screen, feature"
@@ -42,7 +51,8 @@ def render(d: Decision, status: str) -> str:
 
     if missing:
         parts = ["**Some details are missing from this bug report.**"]
-        items = [f"- **{NAMES[c]}**: {HOW_TO_FIX[c]}" for c in missing]
+        how = {**HOW_TO_FIX, **STRICT_HOW_TO_FIX} if d.strict else HOW_TO_FIX
+        items = [f"- **{NAMES[c]}**: {how[c]}" for c in missing]
         parts.append("\n".join(["Missing:", *items]))
     elif unsure:
         parts = ["**Could not check everything in this bug report.**"]
