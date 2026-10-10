@@ -230,16 +230,25 @@ def _strict_expected(description: str) -> bool:
 
 
 def _result_text(description: str) -> str:
-    """Prose outside the Steps / Expected sections: where a result could be."""
-    keep, skip = [], False
+    """Prose outside the Steps / Expected sections: where a result could be. A
+    Steps list ends at the first unindented line that is not an item: authors
+    often write the result right after the steps, with no heading of its own."""
+    keep, skip, steps, listed = [], False, False, False
     for line in _prose(description).split("\n"):
         head = _section_head(line)
         if head:
-            skip = head[3].lower() in ("steps", "expected")
+            steps = head[3].lower() == "steps"
+            skip = steps or head[3].lower() == "expected"
+            listed = False
             if not skip:
                 keep.append(head[7])
         elif _ANY_HEAD.match(line):
             skip = False
+        elif steps and skip and _LIST_ITEM.match(line):
+            listed = True
+        elif steps and skip and listed and line.strip() and line == line.lstrip():
+            skip = False
+            keep.append(line)
         elif not skip:
             keep.append(line)
     return "\n".join(keep)

@@ -266,6 +266,9 @@ def test_strict_expected_missing(description):
         "The rate endpoint returns null for EU parcels.",
         "Export downloads an empty CSV file (0 bytes).",
         "The Host header is always missing the port.",
+        # The result right after the steps, without its own heading (sandbox e2e 9).
+        "Steps:\n1. Open Parcels.\n2. Sort by date.\n\n"
+        "The list starts with parcels from 2019.",
     ],
 )
 def test_strict_actual_present(description):
@@ -286,6 +289,11 @@ def test_strict_actual_present(description):
             ),
         ),
         "Steps:\n1. Log in\n2. Open Route planner\n\nActual: the page is broken.",
+        "Steps:\n1. Log in\n2. Open Route planner\n\nIt doesn't work.",
+        # Prose steps run to the next heading: the walk-through is not a result.
+        "Steps to reproduce:\nLog in as a dispatcher and open the route planner",
+        # A step's own continuation line is still the step.
+        "Steps:\n1. Log in\n2. Open Route planner\n   with the map view on",
         "",
     ],
 )
