@@ -57,6 +57,23 @@ Run 3 was more precise — expected precision 60% → 78% on dev, false "missing
 | actual | 54% | 61% | 68% |
 | build_version | 34% | 94% | 95% |
 
+## Strict mode
+
+The model learned a lenient rubric: it accepts an expected or actual result implied by the title ("Export fails" implies "export should work"). `strict: true` adds deterministic rules on top that can only turn "present" into "missing": steps need at least two actions or a reproducing command, expected must be stated in the description, actual must be concrete rather than "doesn't work". Retraining on a strict rubric was rejected: it means relabelling ~1,500 reports, and public Jira reports are written to the lenient norm — only 20% state an expected result.
+
+Scored on `eval/strict_gold.jsonl`: 129 reports labelled by the strict criteria, of which 93 are real bug reports (the rest are tasks and improvements filed as bugs). Rules plus run 2 at the 0.827 threshold, bugs only (95% Wilson):
+
+| Check | Missing caught | False "missing" on complete parts |
+|---|---|---|
+| steps | 54/55 = 98% (90–100) | 14/38 = 37% (23–53) |
+| expected | 67/70 = 96% (88–99) | 1/23 = 4% (1–21) |
+| actual | 15/30 = 50% (33–67) | 5/63 = 8% (3–17) |
+
+- **Actual is the weak spot.** "Concrete" is semantic; the rules flag only empty or vague results, and a broader rule was wrong in about two of three extra "missing" calls.
+- **Steps cost false alarms**: steps written as prose, and one-command repros the lenient model rejects, are called missing.
+- The steps and expected rules were tuned after the boundary cases in the first 61 reports were decided, so those two figures are optimistic.
+- Five newer open decision models (GLiNER2.5-Decide, OpenDecider-nano and -small, Strands Decider 2B, Kev-0.8B), asked the strict criteria as question text with no fine-tuning, beat these figures on no check and need 2–12 s and up to 14 GB per report on a CPU.
+
 ## Eval v1: the original run 2 (now part of dev)
 
 100 random public reports, the first frozen eval; scored once on the original run 2, before it was read for run 3 planning. Kept as the record of that run.
