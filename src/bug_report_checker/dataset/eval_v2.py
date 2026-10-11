@@ -1,4 +1,4 @@
-"""Eval v2 (D18): a fresh eval from projects that no other set uses.
+"""Eval v2: a fresh eval from projects that no other set uses.
 
 Eval v1 was read while planning run 3, so it became dev. Eval v2 is drawn by the
 `sample_public` scheme (tracker quotas, length buckets, rare parts weighted) from

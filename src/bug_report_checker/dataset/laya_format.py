@@ -2,7 +2,7 @@
 
 The state is the preprocessed `{summary, description}` the model sees at inference; each
 check becomes a `noul` question. Targets are hard (P = 1.0 on the teacher's answer) or,
-with `smoothing` ε, (1 − ε/2, ε/2): run 1 on hard targets came out overconfident (D12).
+with `smoothing` ε, (1 − ε/2, ε/2): run 1 on hard targets came out overconfident.
 laya's own `label_smoothing` applies only to `expected` rows, not to `gold`.
 
 Usage: python -m bug_report_checker.dataset.laya_format <reports.jsonl> <labels.jsonl>

@@ -194,7 +194,7 @@ def test_no_empty_sections(description):
     assert empty_sections(state(description)) == []
 
 
-# Strict mode (D26, D27): the description alone must state each part.
+# Strict mode: the description alone must state each part.
 SANDBOX_8 = "When I try to export pdf, I can see red errors on UI page"
 
 
@@ -284,7 +284,7 @@ def test_strict_actual_present(description):
             "1. Open a shipment\n2. Click Print label\n\nExpected: the label prints.",
             marks=pytest.mark.xfail(
                 strict=True,
-                reason="known limit (T5.7): list lines outside a Steps heading read"
+                reason="known limit: list lines outside a Steps heading read"
                 " as result text; the symptom is only in the summary",
             ),
         ),

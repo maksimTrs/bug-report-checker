@@ -1,4 +1,4 @@
-"""Top up train with public reports that likely lack an expected or actual result (D13).
+"""Top up train with public reports that likely lack an expected or actual result.
 
 Run 1 learned each check's prior: expected (18% missing in train) and actual (7%) are
 almost always answered "present". laya has no class weights, so the rare class needs

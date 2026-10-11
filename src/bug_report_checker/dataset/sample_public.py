@@ -28,7 +28,7 @@ from bug_report_checker.preprocess import preprocess
 
 SEED = 20261008
 POOL_RATE = 0.05
-ROOM = 767  # worst-case state room of laya-typed-decisions (D6)
+ROOM = 767  # worst-case state room of laya-typed-decisions
 SIZES = (220, 90, 10)  # train, eval that fits, eval longer than ROOM
 EVAL_SHARE = 0.3  # share of a tracker's candidates whose projects go to eval
 BUCKETS = ((0, 60), (61, 250), (251, ROOM))
@@ -47,7 +47,7 @@ _SECTION_HEADER = re.compile(
 
 
 def flags(description: str) -> dict[str, bool]:
-    """Rare parts of a report (T1.10), a heuristic for sampling, not a label."""
+    """Rare parts of a report, a heuristic for sampling, not a label."""
     return {
         "steps": bool(_STEPS_HEADER.search(description))
         or len(_NUMBERED.findall(description)) >= 2,

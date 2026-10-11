@@ -27,11 +27,11 @@ class Decision:
     long: bool  # read in several windows: the answers are less reliable
     environments: list[str]
     image_only: list[str]  # result fields shown only as a screenshot
-    strict: bool  # checked by the strict criteria (config `strict`, D26)
+    strict: bool  # checked by the strict criteria (config `strict`)
 
 
 def _verdict(p_true: float, threshold: float) -> str:
-    """Below `threshold` confidence the bot gives no verdict (calibrated, T3.4)."""
+    """Below `threshold` confidence the bot gives no verdict (calibrated)."""
     if max(p_true, 1 - p_true) < threshold:
         return UNSURE
     return PRESENT if p_true >= 0.5 else MISSING
@@ -56,7 +56,7 @@ def decide(agent, state: dict[str, str], config: Config) -> Decision:
         verdicts["steps"] = MISSING  # the summary is never the steps (rubric)
     for check in empty_sections(state):
         verdicts[check] = MISSING  # a bare template heading is not the content
-    if config.strict:  # rules only lower a verdict, never raise it (D27)
+    if config.strict:  # rules only lower a verdict, never raise it
         for check in strict_missing(state):
             verdicts[check] = MISSING
     build = build_version(state, config.build_version_pattern)

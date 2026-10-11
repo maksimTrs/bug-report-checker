@@ -111,7 +111,7 @@ Looked for in the description only.
 
 - nothing about the correct behaviour;
 - a vague negation that leaves the correct result open: "works incorrectly", "shows a wrong amount", "is broken";
-- a request or a question instead of a result ("please investigate", "@lead, what should happen here?");
+- a request or a question instead of a result ("please investigate", "Dana, what should happen here?");
 - a screenshot with no expected-result heading: it shows what happened, not what should;
 - **an expected-result field that is present but empty — always "no"**, even if a negation elsewhere would imply the answer.
 
@@ -120,7 +120,7 @@ Looked for in the description only.
 | `Invoice shows the wrong VAT amount for Belgian addresses.` | no | Wrong, but the right amount is not given. |
 | `Tapping "Print label" does nothing: no dialog, no error.` | yes | The correct behaviour (the label prints) is unambiguous. |
 | `Expected:`<br>`Actual: the app closes when I tap Save.` | no | The expected field is empty. The rule for an empty field wins over the negation. |
-| `Expected: not sure, @dispatch-lead should cancelled pickups stay on the list?` | no | A question, not a result. |
+| `Expected: not sure, Dana, should cancelled pickups stay on the list?` | no | A question, not a result. |
 
 ## 6. `actual` — actual result
 

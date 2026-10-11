@@ -102,7 +102,7 @@ def test_replace_media(text, expected):
             "[https://ci.example.com/1](https://ci.example.com/1)",
             "[link: ci.example.com]",
         ),
-        ("Build version: 2026.09-dev-118", "Build version: 2026.09-dev-118"),
+        ("Build version: R26.09-dev-118", "Build version: R26.09-dev-118"),
     ],
 )
 def test_replace_links(text, expected):

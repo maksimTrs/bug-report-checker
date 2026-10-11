@@ -21,7 +21,7 @@ HOW_TO_FIX = {
     "build_version": "name the exact build where you saw the bug,"
     " not latest or the current prod.",
 }
-# Strict mode asks for what the description itself must state (D26).
+# Strict mode asks for what the description itself must state.
 STRICT_HOW_TO_FIX = {
     "steps": "list at least two steps, or give a command or snippet that"
     " reproduces it.",

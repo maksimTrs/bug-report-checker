@@ -1,4 +1,4 @@
-"""Run 3 data (D20): ordinary reports with a likely gap, and Opus labels throughout.
+"""Run 3 data: ordinary reports with a likely gap, and Opus labels throughout.
 
 Run 2 errors on dev v3 (dev + eval v1) on actual / expected are not task-like reports,
 which run 2's top-up already covers, but one-liners, descriptions that only restate the
@@ -7,7 +7,7 @@ both evals, labelled by Opus and kept whole, gap or not: keeping the complete on
 the model from learning "short means incomplete".
 
 Train and dev are relabelled by Opus too: Sonnet calls the expected result missing where
-the rubric counts a crash or a plain negation as stated (D19), so Sonnet-labelled train
+the rubric counts a crash or a plain negation as stated, so Sonnet-labelled train
 and Opus-labelled eval disagreed on what "missing" means.
 
 Usage:

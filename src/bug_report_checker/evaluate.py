@@ -24,7 +24,7 @@ from bug_report_checker.labeling import CHECKS
 from bug_report_checker.questions import laya_questions
 
 Z95 = 1.96
-TARGETS = ("expected", "actual")  # run 3 exists to raise recall of these (D18)
+TARGETS = ("expected", "actual")  # run 3 exists to raise recall of these
 BLOCKERS = ("steps", "expected", "actual", "build_version")
 MAX_DROP = 0.05  # recall / precision of "missing" or false "missing", any check
 MAX_ECE_RISE = 0.03  # blockers
@@ -92,12 +92,12 @@ def gate(
     new: list[dict],
     random_ids: set[str] | None = None,
 ) -> list[str]:
-    """Why `new` may not replace `old` under the rule set before training (D18).
+    """Why `new` may not replace `old` under the rule set before training.
 
     An empty list means it may. Precision of a model that never says "missing" counts
     as 0, so a model that stops answering "missing" cannot pass on precision.
     Precision barely moves on a set rich in gaps, so false "missing" on present parts
-    is checked separately on `random_ids`, the reports drawn at random (D20).
+    is checked separately on `random_ids`, the reports drawn at random.
     """
     old_by_id = {x["id"]: x for x in old}
     new_by_id = {x["id"]: x for x in new}

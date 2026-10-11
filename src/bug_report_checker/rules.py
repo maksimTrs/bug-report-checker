@@ -117,8 +117,8 @@ def empty_sections(state: dict[str, str]) -> list[str]:
     return [f for f in ("steps", "expected") if f in empty - filled]
 
 
-# Strict mode (D26, D27): the description itself must state each part. Measured on
-# the strict gold `eval/strict_gold.jsonl`; the boundaries are Max's (T5.7).
+# Strict mode: the description itself must state each part. Measured on the strict
+# gold `eval/strict_gold.jsonl` (docs/results.md); the boundaries are the author's.
 _CODE_BLOCK = re.compile(r"```.*?(?:```|\Z)", re.S)
 _LIST_ITEM = re.compile(r"^\s*(?:\d+[.)]|[-*•])\s+\S", re.M)
 # One runnable command, query, call or snippet is a repro, fenced or not.
@@ -178,7 +178,7 @@ _CONCRETE = [
         re.I,
     ),
 ]
-# Without a marker, a result in these words is not concrete (Max: "red errors on UI
+# Without a marker, a result in these words is not concrete (such as "red errors on UI
 # page", "doesn't work"); a prose symptom without them is ("the header lacks the port").
 _VAGUE_RESULT = re.compile(
     r"\b(?:does\s*n[o']?t|do\s*n[o']?t|wo\s*n't|will\s+not|is\s*n't|is\s+not)\s+work"
@@ -256,7 +256,7 @@ def _result_text(description: str) -> str:
 
 def _strict_actual(description: str) -> bool:
     """Missing only when nothing concrete is found and the result is absent or
-    vague: "concrete" is semantic, so the rule stays narrow (D26 measurement)."""
+    vague: "concrete" is semantic, so the rule stays narrow."""
     if "[image]" in description or _CODE_BLOCK.search(description):
         return True
     prose = _prose(description)

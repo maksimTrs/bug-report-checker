@@ -17,7 +17,7 @@ def _synthetic(id_, area="Billing"):
     return {
         "id": id_,
         "summary": "[Billing] Refund fails",
-        "description": "**Build version:** 2026.10-rc-1\n\n# Steps",
+        "description": "**Build version:** R26.10-rc-1\n\n# Steps",
         "area": area,
     }
 
@@ -49,7 +49,7 @@ def test_assemble_preprocesses_by_source_and_maps_fields():
         "tracker": "Parcelwise",
         "project": "Billing",
         "summary": "Refund fails",
-        "description": "**Build version:** 2026.10-rc-1\n\n# Steps",
+        "description": "**Build version:** R26.10-rc-1\n\n# Steps",
     }
 
 
