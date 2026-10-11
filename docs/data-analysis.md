@@ -60,7 +60,7 @@ Issue types absent from the mapping: 9,739 issues, almost all Sonatype "Publishi
 | Spring | 27,118 | 26,068 |
 | **Total** | **1,522,538** | **1,472,410** (96.7%) |
 
-Mojang is a bug-only tracker (every issue is a Bug) and holds 28% of all bugs; Apache holds 34%. Sampling (T1.11) has to stratify by tracker so these two do not dominate.
+Mojang is a bug-only tracker (every issue is a Bug) and holds 28% of all bugs; Apache holds 34%. Sampling for training has to stratify by tracker so these two do not dominate.
 
 ## Length in Laya tokens
 
@@ -88,7 +88,7 @@ The state gets `max_len - question head - 1` tokens. For `laya-typed-decisions` 
 | Spring | 1,318 | 178 | 502 | 1,577 | 3.7% | 3.0% |
 | **Total** | **73,967** | **123** | **424** | **1,810** | **3.7%** | **2.9%** |
 
-96% of bugs fit one 1024-token sequence even with the largest question head; the 3–4% tail goes through `predict_long` (sliding windows). Mojang reports are the shortest (median 79), MariaDB and IntelDAOS the longest — sampling (T1.11) should keep length buckets, not only trackers.
+96% of bugs fit one 1024-token sequence even with the largest question head; the 3–4% tail goes through `predict_long` (sliding windows). Mojang reports are the shortest (median 79), MariaDB and IntelDAOS the longest — sampling should keep length buckets, not only trackers.
 
 ## Manual review of 50 bugs
 
@@ -110,7 +110,7 @@ The state gets `max_len - question head - 1` tokens. For `laya-typed-decisions` 
 - **Not every Bug is a bug:** 2 of 50 are a question / feature request and a release checklist. Expected noise for the teacher to label as incomplete.
 - **Attachments:** one report with `[image]` in 50; screenshots in the public data are rare.
 
-Rare parts to top up in sampling (T1.11) and synthetic data (T1.12): explicit steps, explicit expected result, version or build number in the text, headed templates (filled, partially filled, empty), screenshot-only results.
+Rare parts to top up in sampling and synthetic data: explicit steps, explicit expected result, version or build number in the text, headed templates (filled, partially filled, empty), screenshot-only results.
 
 Preprocessing gaps found on the way (1% sample, share of descriptions, before → after the fix):
 
@@ -134,4 +134,4 @@ Preprocessing gaps found on the way (1% sample, share of descriptions, before �
 | Version or build number | 14.1% | 26.4% |
 | Headed template (≥ 2 of steps / expected / actual) | 2.8% | 6.4% |
 
-The rest of the balance comes from synthetic reports (T1.12–T1.13).
+The rest of the balance comes from synthetic reports.
