@@ -2,6 +2,8 @@
 
 Per-check agreement of the teacher's labels with a reference set: `python -m bug_report_checker.labeling.agreement <reference.jsonl> <labels.jsonl>`. Labels are skewed (`actual` is "yes" in most reports), so the minority class is reported separately: always answering the majority would score high on the first column and zero on the last.
 
+**Who labels.** Every label in this project is model-made: Claude Sonnet labels train, Claude Opus labels the eval sets, both against the public rubric (`labeling/rubric.md`). Where they disagree on a blocker, Claude (Opus, in the authoring session) decides against the rubric. The author settled where the rubric's boundaries lie and confirmed the gold-20 calls, but labelled no report by hand. So the eval measures agreement with a careful model reading of the rubric, not with human annotators.
+
 ## Rubric check: Sonnet vs gold 20
 
 Gold: `labeling/gold_20.jsonl` — 20 public reports chosen so every check has both classes, labelled by two independent model annotators against `labeling/rubric.md` (135/140 agreement), disagreements adjudicated. Teacher: `claude-sonnet-5-5` with `labeling/prompt.md` + `labeling/rubric.md`. Threshold: 17/20 per check.
@@ -35,7 +37,7 @@ Both teachers labelled `data/eval.jsonl` with the same prompt and rubric, indepe
 - Every check passes; no relabelling. The blockers (steps, expected, actual, build_version) agree on 90–96 reports.
 - The weak spot is `summary_what`: the teachers agree on only half of the titles Opus calls defect-free (16/30). It is a hint, not a blocker, and can be switched off without touching completeness.
 - `expected` and `actual` disagree mostly on the minority class (4 of 18, 3 of 11): the student's recall on missing parts will be bounded by this teacher noise.
-- Disagreements are reviewed by hand before the eval set is frozen (T2.8).
+- Blocker disagreements are adjudicated before the eval set is frozen (below).
 
 ## Label balance (Sonnet, share of "yes")
 
@@ -51,7 +53,7 @@ Both teachers labelled `data/eval.jsonl` with the same prompt and rubric, indepe
 
 ## Frozen eval set
 
-`eval/eval.jsonl` — the 100 eval reports with final labels, not to be changed. Labels: Opus, except the 25 blocker labels (21 reports) where Sonnet and Opus disagreed — each was decided against the rubric; 19 kept Opus, 6 took Sonnet. Hint disagreements (summary checks) keep Opus without review.
+`eval/eval.jsonl` — the 100 eval reports with final labels, not to be changed. Labels: Opus, except the 25 blocker labels (21 reports) where Sonnet and Opus disagreed — each was decided against the rubric by Claude; 19 kept Opus, 6 took Sonnet. Hint disagreements (summary checks) keep Opus without review.
 
 Agreement of each teacher with the final labels:
 
@@ -68,7 +70,7 @@ Eval v1 was read while planning run 3 (the run 2 misses on it shaped a draft top
 
 - **Random core, 100 reports** (`"core": true`), drawn by the same scheme as eval v1 and set aside before any label was seen. Accuracy and precision are read here.
 - **70 added reports** where Sonnet found the actual or the expected result missing, so the two weak checks have enough cases for recall: 41 reports without an actual result, 53 without an expected one (10 and 12 of them in the core). Mojang, IntelDAOS and SecondLife have no unused project left, so they are absent.
-- **Labels:** Opus on all 170, the 63 blocker disagreements with Sonnet (59 reports) decided against the rubric: 59 kept Opus, 4 took Sonnet (`actual`: an improvement or a "should" with no observed result). E-mail addresses in five reports are replaced with `[email]`.
+- **Labels:** Opus on all 170, the 63 blocker disagreements with Sonnet (59 reports) decided against the rubric by Claude: 59 kept Opus, 4 took Sonnet (`actual`: an improvement or a "should" with no observed result). E-mail addresses in five reports are replaced with `[email]`.
 
 Sonnet vs final labels on the random core (on all 170 the added part inflates disagreement, since it was picked by Sonnet's answers):
 

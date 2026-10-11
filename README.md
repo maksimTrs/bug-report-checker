@@ -59,7 +59,20 @@ Optional `.github/bug-checker.yml` on the default branch; every key has a defaul
 
 ## Results
 
-On 170 held-out public bug reports, the model finds 98% of reports without steps and 94% without a build version; expected and actual results are the weak checks (about half found on the random core). In strict mode, on 93 bugs labelled by the strict criteria: steps 98%, expected 96%, actual 50%. Details with confidence intervals: [docs/results.md](docs/results.md); model card: [docs/model-card.md](docs/model-card.md).
+What the bot says at its default threshold, on public Jira reports kept out of training and model selection. *Caught*: reports without the part that the bot calls "missing". *False alarm*: reports with the part that it calls "missing" anyway. The rest of the answers are "not sure".
+
+| Check | Default: caught | Default: false alarm | Strict: caught | Strict: false alarm |
+|---|---|---|---|---|
+| steps | 50/53 (94%) | 12/47 (26%) | 54/55 (98%) | 14/38 (37%) |
+| build version | 70/82 (85%) | 4/18 (22%) | same as default | same as default |
+| expected | 5/12 (42%) | 2/88 (2%) | 67/70 (96%) | 1/23 (4%) |
+| actual | 4/10 (40%) | 1/90 (1%) | 15/30 (50%) | 5/63 (8%) |
+
+- **Default** is scored on 100 random reports against lenient labels, **strict** on 93 bug reports against strict labels. Different sets, so compare within a mode, not across.
+- **Steps and build version carry the bot.** In default mode expected and actual are weak: the model accepts a result implied by the title. Strict mode fixes expected; actual stays at half, since "concrete" is hard to pin down with rules.
+- **The sets are small.** The 95% interval of 50/53 is 85–98%, of 5/12 it is 19–68%: read the rows with few cases as a direction, not a figure. Labels come from Claude models against a [public rubric](labeling/rubric.md), not from human annotators.
+
+Details, intervals and the training runs: [docs/results.md](docs/results.md). Labels: [docs/labeling-agreement.md](docs/labeling-agreement.md). Model: [docs/model-card.md](docs/model-card.md).
 
 Limits: English reports, a fixed rubric, training data from public Jira projects.
 

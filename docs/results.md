@@ -1,6 +1,6 @@
 # Results
 
-Fine-tuned Laya (`typed-decisions` checkpoint, 7 `noul` questions). The headline numbers are on **eval v2**: 170 public bug reports from 115 projects that no other set touches, labelled by Opus with Sonnet disagreements adjudicated ([labeling-agreement.md](labeling-agreement.md)).
+Fine-tuned Laya (`typed-decisions` checkpoint, 7 `noul` questions). The headline numbers are on **eval v2**: 170 public bug reports from 115 projects that no other set touches, labelled by Claude Opus, disagreements with Claude Sonnet adjudicated by Claude against the rubric. The labels are model-made, not human ([labeling-agreement.md](labeling-agreement.md)).
 
 ## Setup
 
@@ -61,7 +61,7 @@ Run 3 was more precise — expected precision 60% → 78% on dev, false "missing
 
 The model learned a lenient rubric: it accepts an expected or actual result implied by the title ("Export fails" implies "export should work"). `strict: true` adds deterministic rules on top that can only turn "present" into "missing": steps need at least two actions or a reproducing command, expected must be stated in the description, actual must be concrete rather than "doesn't work". Retraining on a strict rubric was rejected: it means relabelling ~1,500 reports, and public Jira reports are written to the lenient norm — only 20% state an expected result.
 
-Scored on `eval/strict_gold.jsonl`: 129 reports labelled by the strict criteria, of which 93 are real bug reports (the rest are tasks and improvements filed as bugs). Rules plus run 2 at the 0.827 threshold, bugs only (95% Wilson):
+Scored on `eval/strict_gold.jsonl`: 129 reports labelled blind by Claude Opus against the strict criteria (six labels changed after the author drew the boundaries), of which 93 are real bug reports (the rest are tasks and improvements filed as bugs). Rules plus run 2 at the 0.827 threshold, bugs only (95% Wilson):
 
 | Check | Missing caught | False "missing" on complete parts |
 |---|---|---|
