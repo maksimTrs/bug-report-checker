@@ -26,4 +26,4 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: maksimTrs/bug-report-checker@main # pin to a commit SHA in real use
+      - uses: maksimTrs/bug-report-checker@v1 # or the tag's commit SHA, to fix the version
